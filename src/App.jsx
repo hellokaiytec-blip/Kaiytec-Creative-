@@ -901,7 +901,9 @@ function ProcessSection() {
 // ─────────────────────────────────────────────────────────────
 // NEWSLETTER SECTION
 // ─────────────────────────────────────────────────────────────
- const submit = async () => {
+ function NewsletterSection() {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState("idle");const submit = async () => {
     if (!email || !email.includes("@")) return;
     setState("loading");
     try {
@@ -1338,7 +1340,10 @@ function AboutPage({ setPage }) {
 // ─────────────────────────────────────────────────────────────
 // CONTACT PAGE
 // ─────────────────────────────────────────────────────────────
- const send = async () => {
+function ContactPage() {
+  const [form, setForm] = useState({ name:"", email:"", service:"", message:"" });
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false); const send = async () => {
     if (!form.name || !form.email || !form.message) return;
     setLoading(true);
     try {
