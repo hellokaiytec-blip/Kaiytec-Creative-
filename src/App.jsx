@@ -1677,7 +1677,7 @@ export default function App() {
       <Sidebar page={section} setPage={navigate} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
       {/* MAIN CONTENT — offset for sidebar on desktop */}
-      <main style={{ marginLeft:0 }} className="main-content">
+      <main style={{ }} className="main-content">
         {renderPage()}
       </main>
 
@@ -1691,7 +1691,7 @@ export default function App() {
 
       {/* ADMIN TRIGGER — subtle lock icon bottom left */}
       <button onClick={() => setAdminOpen(true)} title="Admin" style={{
-        position:"fixed", bottom:28, left: 228, zIndex:800,
+        position:"fixed", bottom:28, left: 260, zIndex:800,
         background:"rgba(10,90,47,0.07)", border:`1px solid ${BRAND.border}`,
         borderRadius:"50%", width:34, height:34, cursor:"pointer",
         display:"flex", alignItems:"center", justifyContent:"center",
@@ -1734,7 +1734,7 @@ export default function App() {
 
         /* Desktop sidebar offset */
         @media (min-width:901px) {
-          .main-content { margin-left:220px; }
+          .main-content { margin-left:260px; }
           .sidebar-desktop { display:flex !important; }
           .hamburger-btn { display:none !important; }
           .mobile-menu { display:none !important; }
