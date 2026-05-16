@@ -1,0 +1,1755 @@
+/**
+ * KAIYTEC Creative — Full Multi-Page Premium Agency Platform
+ * 
+ * Architecture: React SPA with hash-based routing (production: React Router v6)
+ * Sections: Home · Work · Services · Blog · About · Contact · Admin
+ * 
+ * LOGO: Uses uploaded KAIYTEC original logo assets via base64/img tag
+ * CMS: Admin panel structured for Supabase integration
+ * Deployment: Netlify-ready, environment-variable aware
+ */
+
+import { useState, useEffect, useRef, useCallback } from "react";
+
+// ─────────────────────────────────────────────────────────────
+// BRAND TOKENS
+// ─────────────────────────────────────────────────────────────
+const BRAND = {
+  green:      "#0A5A2F",
+  greenHover: "#0d7a3e",
+  greenLight: "#EAF1EC",
+  greenMist:  "#f0f5f1",
+  ink:        "#0D0D0D",
+  inkSoft:    "#1a1a1a",
+  mist:       "#F7F6F2",
+  warm:       "#F4F2EE",
+  white:      "#FFFFFF",
+  sage:       "#EAF1EC",
+  border:     "rgba(10,90,47,0.12)",
+  textMid:    "#555",
+  textLight:  "#888",
+};
+
+// ─────────────────────────────────────────────────────────────
+// SOCIAL CONFIG (centralized — update once)
+// ─────────────────────────────────────────────────────────────
+const SOCIAL = {
+  instagram: "https://instagram.com/kaiytec.creative",
+  facebook:  "https://facebook.com/kaiyteccreative",
+  tiktok:    "https://tiktok.com/@kaiytec",
+  linkedin:  "https://linkedin.com/company/kaiytec",
+  behance:   "https://behance.net/kaiytec",
+  twitter:   "https://twitter.com/kaiytec",
+};
+
+// WhatsApp config
+const WA_NUMBER = "23232681677"; // Replace with real number
+const WA_MSG    = encodeURIComponent("Hello KAIYTEC Creative, I'd like to discuss a project.");
+const WA_URL    = `https://wa.me/${WA_NUMBER}?text=${WA_MSG}`;
+
+// ─────────────────────────────────────────────────────────────
+// LOGO COMPONENT — uses uploaded original logo
+// ─────────────────────────────────────────────────────────────
+function Logo({ height = 36 }) {
+  return (
+    <img
+      src="/KAIYTEC ICON LOGO.png"
+      alt="KAIYTEC Logo"
+      style={{ height }}
+    />
+  );
+}
+// ─────────────────────────────────────────────────────────────
+// HOOKS
+// ─────────────────────────────────────────────────────────────
+function useScrollY() {
+  const [y, setY] = useState(0);
+  useEffect(() => {
+    const h = () => setY(window.scrollY);
+    window.addEventListener("scroll", h, { passive:true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+  return y;
+}
+
+function useInView(threshold = 0.12) {
+  const ref  = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVis(true); }, { threshold });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, vis];
+}
+
+function Reveal({ children, delay = 0, y = 28, style = {} }) {
+  const [ref, vis] = useInView();
+  return (
+    <div ref={ref} style={{
+      opacity: vis ? 1 : 0,
+      transform: vis ? "translateY(0)" : `translateY(${y}px)`,
+      transition: `opacity 0.75s ease ${delay}s, transform 0.75s ease ${delay}s`,
+      ...style,
+    }}>{children}</div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// TYPOGRAPHY
+// ─────────────────────────────────────────────────────────────
+const T = {
+  eyebrow: {
+    fontFamily:"'Exo 2', sans-serif", fontWeight:700,
+    fontSize:11, letterSpacing:"0.22em", textTransform:"uppercase", color: BRAND.green,
+  },
+  h1: {
+    fontFamily:"'Exo 2', sans-serif", fontWeight:800,
+    fontSize:"clamp(2.8rem,6vw,5.2rem)", lineHeight:1.06,
+    color: BRAND.ink, letterSpacing:"-0.01em",
+  },
+  h2: {
+    fontFamily:"'Exo 2', sans-serif", fontWeight:800,
+    fontSize:"clamp(2rem,3.6vw,3rem)", lineHeight:1.12, color: BRAND.ink,
+  },
+  h3: {
+    fontFamily:"'Exo 2', sans-serif", fontWeight:700,
+    fontSize:"clamp(1.2rem,2vw,1.6rem)", lineHeight:1.2, color: BRAND.ink,
+  },
+  body: {
+    fontFamily:"Georgia, 'Times New Roman', serif",
+    fontSize:"clamp(0.95rem,1.4vw,1.08rem)", lineHeight:1.85,
+    color: BRAND.textMid, fontStyle:"italic",
+  },
+  small: {
+    fontFamily:"'Exo 2', sans-serif", fontSize:12,
+    letterSpacing:"0.08em", color: BRAND.textLight,
+  },
+  tag: {
+    fontFamily:"'Exo 2', sans-serif", fontWeight:700,
+    fontSize:10, letterSpacing:"0.18em", textTransform:"uppercase",
+    color: BRAND.green, background: BRAND.sage,
+    padding:"4px 12px", borderRadius:20, display:"inline-block",
+  },
+};
+
+// ─────────────────────────────────────────────────────────────
+// SECTION LABEL
+// ─────────────────────────────────────────────────────────────
+function SectionLabel({ text }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+      <div style={{ width:3, height:24, background: BRAND.green, borderRadius:2 }} />
+      <span style={T.eyebrow}>{text}</span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────
+const CONCEPTS = [
+  {
+    slug:     "maison-solene",
+    category: "Luxury Fashion",
+    title:    "Maison Solène",
+    subtitle: "A Luxury Fashion House Identity",
+    year:     "2025",
+    color:    "#1a1209",
+    accent:   "#c9a96e",
+    palette:  ["#1a1209","#c9a96e","#f5f0e8","#2d1f0e","#ffffff"],
+    challenge:"A new luxury fashion label entering a market dominated by century-old heritage houses needed to feel timeless from day one — without fabricating history or heritage.",
+    research: "We studied how heritage luxury brands communicate restraint — the use of negative space, proportion over decoration, and material language as a primary signal of quality. The insight: true luxury whispers.",
+    solution: "We built the identity around 'earned restraint' — a system that uses silence, proportion, and material language to communicate luxury without announcing it. Every element earns its place.",
+    direction:"Monochromatic palette anchored in deep espresso, with champagne gold as a single accent used sparingly. A bespoke serif wordmark with micro-spaced letterspacing. Packaging designed to feel like unwrapping a promise.",
+    branding: "The typeface selection centered on a custom-modified Didot variant — classical authority with modern precision. Gold foil stamping reserved for primary brand materials only.",
+    digital:  "A minimal editorial website with full-screen imagery, almost no interface chrome. The brand speaks; the UI steps back. Mobile experience mirrors a high-end lookbook.",
+    marketing:"Campaign direction: still, cinematic, unhurried. No lifestyle noise. Single product. Perfect light. The campaign says: we have nothing to prove.",
+    impact:   "The brand launched with immediate editorial recognition, positioning it as a serious entrant in the premium fashion space before a single collection was shown publicly.",
+    tags:     ["Brand Identity","Typography","Packaging","Digital Experience","Campaign Direction"],
+  },
+  {
+    slug:     "verde-and-flame",
+    category: "Restaurant Experience",
+    title:    "Verde & Flame",
+    subtitle: "A Modern Dining Experience Brand",
+    year:     "2025",
+    color:    "#1c2b1a",
+    accent:   "#e8735a",
+    palette:  ["#1c2b1a","#e8735a","#f2e8d0","#2e4a2c","#faf6ef"],
+    challenge:"A new restaurant concept — contemporary African-Mediterranean fusion — had no visual language. The owners had a powerful culinary vision but couldn't translate it into a brand identity.",
+    research: "We explored the intersection of fire-based cooking traditions across West African and Mediterranean cultures — finding common threads in warmth, ritual, and sensory abundance.",
+    solution: "We developed a brand around the tension between fire and nature — earthy greens against deep ember tones, refined typography balanced by hand-crafted illustration elements.",
+    direction:"Custom illustrated botanical motifs drawn from indigenous herbs used in both cuisines. Menu design structured like a short story — appetizers as prologue, mains as the arc.",
+    branding: "A warm, weighted serif for the wordmark. A custom monogram for embossed surfaces. The brand works in three contexts: fine dining plating, street food pop-up, and premium delivery.",
+    digital:  "A reservation-focused website with a strong visual story. Ambient video loops of kitchen fire and table settings. The booking flow designed to feel like an invitation.",
+    marketing:"Social content direction: documentary-style process videos, intimate chef portraits, and ingredient origin stories. No promotional language — only authentic storytelling.",
+    impact:   "Full brand system gave the restaurant a coherent story across physical and digital touchpoints — making the experience begin before guests arrived.",
+    tags:     ["Brand Identity","Environmental Design","Menu Design","Digital Experience","Social Strategy"],
+  },
+  {
+    slug:     "horizon-estates",
+    category: "Premium Real Estate",
+    title:    "Horizon Estates",
+    subtitle: "Premium Real Estate Brand Identity",
+    year:     "2025",
+    color:    "#0e1e2e",
+    accent:   "#b8965a",
+    palette:  ["#0e1e2e","#b8965a","#f8f5f0","#1a3048","#ffffff"],
+    challenge:"A real estate developer specializing in high-end residences needed a brand that could compete with global luxury property firms while feeling authentically considered.",
+    research: "Analysis of how the world's most respected property brands communicate — finding that they rarely discuss property at all. They sell a life, a perspective, a relationship with space.",
+    solution: "We created a visual identity built on architectural language — clean geometric forms, a refined mark inspired by structural drafting, a tone of voice that speaks to aspiration without overselling.",
+    direction:"Deep slate blue and warm ivory palette. The brand mark functions as both a logo and an architectural shorthand — a compressed horizon line with a structure rising from it.",
+    branding: "A geometric sans-serif wordmark in deep slate. Gold as a functional accent — not decoration. All materials formatted for both large-format print and high-resolution digital screens.",
+    digital:  "Property pages designed for high-resolution photography first. The website functions as a gallery before it functions as a catalogue. Virtual tour integration. Appointment booking.",
+    marketing:"Print collateral: architectural-quality brochures. Digital campaigns targeting high-net-worth audiences with editorial creative direction, not sales language.",
+    impact:   "A cohesive brand system that allowed the developer to present properties at international standard — with full confidence in every client interaction.",
+    tags:     ["Brand Identity","Print Design","Digital Experience","Campaign","Signage"],
+  },
+  {
+    slug:     "luminary-os",
+    category: "Creative Tech",
+    title:    "Luminary OS",
+    subtitle: "A Creative Productivity Platform Identity",
+    year:     "2025",
+    color:    "#130e1f",
+    accent:   "#7c5cbf",
+    palette:  ["#130e1f","#7c5cbf","#c4a8f5","#1e1530","#f8f6ff"],
+    challenge:"A new creative productivity platform for designers and content teams needed an identity that felt both technical and imaginative — bridging the gap between software and artistry.",
+    research: "We explored how light behaves through optical instruments — prisms, lenses, diffraction gratings. The insight: creative tools don't produce light, they reveal what was already there.",
+    solution: "We built a dynamic identity system inspired by light and optical phenomena — a mark that holds meaning from every angle, materials that feel alive under different conditions.",
+    direction:"Deep violet-to-obsidian gradient palette with luminescent accent. A geometric wordmark where letterforms reference optical precision. Icon system built on light-ray geometry.",
+    branding: "The primary mark works in full color, single-color, and a unique 'light mode' that inverts beautifully. Animation direction: prismatic expansion and contraction.",
+    digital:  "A product website that feels like entering a creative environment — gradient backgrounds, smooth transitions, no hard edges. Onboarding flow designed as a creative ritual.",
+    marketing:"Launch campaign: 'What will you make with light?' — open-ended, imagination-first. No feature lists. No comparison tables. Pure creative invitation.",
+    impact:   "The brand positioned Luminary OS as a premium creative tool — approachable yet unmistakably professional. Early beta users described the brand as 'what software should feel like.'",
+    tags:     ["Brand Identity","UI/UX Design","Motion","Digital Marketing","Icon System"],
+  },
+  {
+    slug:     "dr-amara-cole",
+    category: "Personal Brand",
+    title:    "Dr. Amara Cole",
+    subtitle: "High-End Personal Brand Identity",
+    year:     "2025",
+    color:    "#1a1510",
+    accent:   "#0A5A2F",
+    palette:  ["#1a1510","#0A5A2F","#EAF1EC","#2d2419","#F7F6F2"],
+    challenge:"A leading executive coach and keynote speaker needed a personal brand that felt authoritative without being corporate — and deeply human without being casual.",
+    research: "We studied how the world's most respected thought leaders brand themselves — finding that the most powerful personal brands are built around a singular, deeply-held perspective rather than credentials.",
+    solution: "We built the brand around the concept of 'presence' — the ability to command a room, a page, and a screen simultaneously. The brand is her perspective made visible.",
+    direction:"Warm neutrals with a single deep green accent. Custom monogram mark that works as a watermark across all written content. Photography direction: natural light, mid-distance, unhurried.",
+    branding: "A refined serif wordmark for formal contexts. A custom monogram for personal correspondence. A signature content format for her writing — consistent across all channels.",
+    digital:  "A website structured like a premium interview — long-form, image-rich, deeply personal. Speaking page designed for event bookers. A knowledge library that makes expertise browsable.",
+    marketing:"Content system: weekly essays, curated insights, monthly long-form pieces. Newsletter as the primary audience relationship. No social noise — only considered publishing.",
+    impact:   "The personal brand elevated her positioning from local consultant to globally bookable speaker — the digital presence became a tool for pre-qualifying serious opportunities.",
+    tags:     ["Personal Brand","Typography","Website Design","Content Strategy","Photography Direction"],
+  },
+];
+
+const SERVICES = [
+  { slug:"brand-identity",    icon:"◈", title:"Brand Identity Design",        short:"Complete visual identity systems that build recognition and trust from the first impression.", color:"#f0f5f1" },
+  { slug:"website-design",    icon:"◻", title:"Website Design & Development", short:"Responsive, high-performance websites designed with editorial elegance and conversion clarity.", color:"#f5f0f5" },
+  { slug:"ui-ux",             icon:"⬡", title:"UI/UX Design",                 short:"User-centered digital product design. Intuitive flows, beautiful screens, purposeful interactions.", color:"#f5f5f0" },
+  { slug:"creative-direction",icon:"◬", title:"Creative Direction",           short:"Campaign concepting, visual storytelling, and creative leadership that unifies every brand touchpoint.", color:"#f0f4f5" },
+  { slug:"digital-marketing", icon:"◎", title:"Digital Marketing",            short:"Strategy and execution across digital channels — built around real audience behavior.", color:"#f5f2f0" },
+  { slug:"social-media",      icon:"◇", title:"Social Media Branding",        short:"Consistent, compelling social presence — designed to educate, engage, and convert.", color:"#f0f5f2" },
+  { slug:"motion-graphics",   icon:"▷", title:"Motion Graphics",              short:"Animated identities, explainer visuals, and brand films that bring static ideas to life.", color:"#f5f0f0" },
+  { slug:"content-strategy",  icon:"≡", title:"Content Strategy",             short:"Editorial planning, messaging frameworks, and content systems that build long-term authority.", color:"#f2f5f0" },
+  { slug:"seo",               icon:"◉", title:"SEO Optimization",             short:"Technical and content SEO that makes great work discoverable — and sustainable over time.", color:"#f0f5f4" },
+  { slug:"visual-identity",   icon:"⊞", title:"Visual Identity Systems",      short:"Enterprise-level brand architecture across product lines, sub-brands, and multi-market environments.", color:"#f4f0f5" },
+];
+
+const BLOG_POSTS = [
+  {
+    slug:     "logo-least-important",
+    tag:      "Brand Strategy",
+    title:    "Why Your Logo Is the Least Important Part of Your Brand",
+    excerpt:  "Most businesses obsess over their logo. The ones that grow fastest understand that a logo is just the door — and branding is everything behind it.",
+    readTime: "8 min read",
+    date:     "May 2025",
+    hero:     BRAND.greenMist,
+    body: `
+<h2>The Door and What's Behind It</h2>
+<p>There is a particular kind of anxiety that grips business owners the moment they decide to build a brand. It gravitates, almost magnetically, toward the logo. The shape of the letterforms. The exact shade of blue. Whether to use a symbol or a wordmark. Whether the icon "says enough."</p>
+<p>This anxiety is understandable. The logo is visible. It's concrete. It can be shown to people and responded to. It exists in a world where most of branding — the real substance of it — is invisible until you've spent years building it.</p>
+<p>But the obsession with the logo is a category error. And it costs businesses far more than the time spent choosing one.</p>
+
+<h2>What a Logo Actually Does</h2>
+<p>A logo is a recognition device. Nothing more, nothing less. Its only job is to be consistently present at every touchpoint of your brand experience — so that over time, people associate it with everything they've felt, received, and believed about your business.</p>
+<p>That's it. The logo doesn't communicate your values. It doesn't explain your offer. It doesn't create trust or preference or loyalty. All of those things happen elsewhere — in the experience of your product, the quality of your communication, the consistency of your service, and the clarity of your positioning.</p>
+<p>The logo is the face you put to a name that has to be worth something first.</p>
+
+<h2>What Actually Builds a Brand</h2>
+<p>The brands people feel something about — Apple, Patagonia, any luxury house you genuinely admire — did not win on logo design. They won on relentless consistency between what they said and what they did. Between their visual language and their actual behavior. Between their positioning and their product.</p>
+<p>The logo, once that consistency exists, becomes a shortcut to everything you've earned. But it's only a shortcut. The journey has to happen first.</p>
+<p>For a growing business, the real brand-building work happens in the unglamorous places: how you answer inquiries, how you handle problems, what you choose not to do, the quality of your onboarding, the thoughtfulness of your follow-up. None of this shows up in a logo review.</p>
+
+<h2>What to Invest In Instead</h2>
+<p>If the logo is the door, then what's behind it? A positioning strategy — a clear, specific answer to why this business exists and who it's genuinely for. A tone of voice that feels consistent whether you're writing a proposal, an Instagram caption, or a client email. A service or product experience that delivers on what the visual identity promises.</p>
+<p>Visual identity matters. We're not dismissing it. A strong, coherent visual system creates an environment of credibility that lets the real brand have a fair chance. But it's a container. You have to fill it.</p>
+<p>The businesses that grow fastest are the ones that figure out — early — that branding is a behavior, not a deliverable. The logo is the last thing you need to worry about. It's the most visible, but it's doing the least work.</p>
+
+<h2>The Practical Implication</h2>
+<p>When a business comes to us asking only about a logo, we ask them a different question first: what do you want people to feel after every interaction with your business? Not think — feel. Once that answer is clear and honest, the logo design becomes almost easy. It's expressing something that already exists.</p>
+<p>When the answer isn't clear — when the logo is being asked to create the brand rather than represent it — that's when it takes a year and four agency rounds and still doesn't feel right. Because no visual device can do the conceptual work you haven't done yet.</p>
+<p>Build the brand. Then give it a face.</p>
+    `,
+  },
+  {
+    slug:     "invisible-architecture-websites",
+    tag:      "Digital Design",
+    title:    "The Invisible Architecture of Great Websites",
+    excerpt:  "The best websites don't feel designed. They feel inevitable. Here's the structural thinking behind digital experiences that actually convert.",
+    readTime: "10 min read",
+    date:     "April 2025",
+    hero:     "#f0f4f8",
+    body: `
+<h2>When Design Disappears</h2>
+<p>The highest compliment a website can receive is not "it looks beautiful." It's "I didn't even notice the design — I just found what I needed." That invisibility is not an accident. It's the result of intentional structural thinking that puts behavior before aesthetics and function before form.</p>
+<p>Most website briefs begin with visual direction: color, style, vibe, references. And most website disappointments trace back to that same starting point — because starting with how something looks before understanding how it should work is building a house from the roof down.</p>
+
+<h2>Structure Is the Design</h2>
+<p>Information architecture — the way content is organized, prioritized, and connected — is the actual design of a website. The visual layer is its expression. Get the structure wrong, and no amount of beautiful typography will save the experience. Get it right, and a relatively simple visual treatment will feel more sophisticated than an elaborate one built on a confused foundation.</p>
+<p>When we approach a website project, the first question isn't "how should this look?" It's "what is this person trying to do?" — and specifically: what is the business trying to make them feel ready to do? Every page, every section, every piece of content exists in service of that journey. If it doesn't serve it, it shouldn't exist.</p>
+
+<h2>The Hierarchy of Digital Attention</h2>
+<p>Website visitors don't read. They scan. They make a judgment about whether to continue within three to five seconds of arriving — and that judgment is based primarily on whether they can understand, at a glance, what this place is for and whether it's for them.</p>
+<p>This means the hierarchy of your page — what's largest, what's first, what demands attention — is a critical business decision, not just an aesthetic one. The hero section is not a canvas for your best visual work. It's the answer to an unspoken question: "Am I in the right place?"</p>
+
+<h2>Conversion Is an Experience, Not a Moment</h2>
+<p>The mistake most businesses make with their websites is treating conversion as an event — a button click, a form submission — rather than a process that begins the moment someone arrives. People don't convert because a button is the right shade of green. They convert because by the time they reach that button, they've been led through an experience that built enough trust and clarity for them to act.</p>
+<p>That journey — from skeptic to interested to ready — is designed through structure: through the sequencing of proof, through the handling of objections before they're voiced, through the progressive revelation of information in the order that's most useful to a person in the process of making a decision.</p>
+
+<h2>What Makes a Website Feel Premium</h2>
+<p>Premium digital experiences share a set of structural properties that have nothing to do with budget. They're specific rather than general — they speak to someone, not everyone. They're restrained — they present only what's necessary, trusting the visitor's intelligence. They're consistent — every element belongs to the same system and serves the same story.</p>
+<p>The most common thing holding websites back isn't design quality — it's trying to say too many things at once. Every sentence that doesn't serve the story weakens it. Every section added "just in case" dilutes the sections that matter. Great websites are defined as much by what was removed as what was added.</p>
+    `,
+  },
+  {
+    slug:     "color-is-communication",
+    tag:      "Creative Direction",
+    title:    "Color Is Not Decoration. Color Is Communication.",
+    excerpt:  "Every color choice in your brand is a message before a word is read. Understanding the psychology and strategy of color is a fundamental business advantage.",
+    readTime: "7 min read",
+    date:     "April 2025",
+    hero:     "#f5f0ea",
+    body: `
+<h2>The Message Before the Message</h2>
+<p>Before a visitor reads your headline, before they understand your offer, before they've processed a single word — they've already received a message. That message was delivered by color. In the fraction of a second it takes for the brain to process a visual scene, color is working on associations, moods, and instinctive responses that have been forming since childhood.</p>
+<p>This is why color strategy is not a design conversation. It's a brand strategy conversation — because every palette choice is either reinforcing or contradicting what you want people to feel about your business before they consciously know anything about it.</p>
+
+<h2>Color Has Memory</h2>
+<p>Colors don't have universal meanings — but they have cultural and contextual associations that are powerful within any given market. Green speaks to growth, nature, and trust in Western contexts. Gold speaks to premium, achievement, and scarcity. Deep navy speaks to authority, expertise, and reliability. These aren't rules. They're inherited associations that your brand either aligns with or deliberately subverts.</p>
+<p>The strategic question isn't "what does this color mean?" It's: "what does this color mean to the specific people we're trying to reach, in the context of the industry we're in?" A green that signals freshness and health in the food industry might signal inexperience in the finance industry. Context is everything.</p>
+
+<h2>The Palette as a System</h2>
+<p>Amateurs choose a primary color. Professionals build a color system. The difference is the difference between a single instrument and an orchestra. A well-constructed color palette gives you primary authority (your dominant brand color), secondary warmth (the supporting tone that humanizes the primary), accent precision (a single color used sparingly for emphasis), and neutral space (the backgrounds and surfaces that let everything else breathe).</p>
+<p>The neutral is often the most overlooked. The brands that feel most sophisticated rarely use their primary color as much as you'd expect. They let the neutral do most of the visual work — creating space, breathing room, and contrast — so that when the primary appears, it lands with full force.</p>
+
+<h2>Color Consistency Is the Asset</h2>
+<p>The value of color in branding isn't in the individual choice — it's in the relentless consistency with which that choice is applied over time. Coca-Cola red is not remarkable as a color. It's remarkable because it's been the same red, in the same contexts, for so long that the color itself has become part of the brand's equity. The color is now an asset — it means something before the logo appears.</p>
+<p>For growing brands, this means that the return on color strategy comes from commitment, not cleverness. Pick a system that's right for your market and your positioning — and then apply it with absolute consistency across every touchpoint, every piece of content, every communication. The compounding effect of that consistency is more valuable than any clever choice.</p>
+    `,
+  },
+  {
+    slug:     "premium-positioning",
+    tag:      "Business Growth",
+    title:    "What 'Premium Positioning' Actually Means for a Growing Brand",
+    excerpt:  "Premium isn't about being expensive. It's about being intentional at every touchpoint — from your first impression to your follow-up email.",
+    readTime: "11 min read",
+    date:     "March 2025",
+    hero:     "#f0f5f0",
+    body: `
+<h2>The Misunderstanding of Premium</h2>
+<p>When most people hear "premium positioning," they think about price. About being expensive. About excluding people. This misunderstanding prevents more businesses from accessing premium positioning than any actual quality barrier — because premium is not fundamentally about price. Premium is about intentionality. And intentionality is available to any brand, at any stage.</p>
+<p>A premium brand is one where every decision — every element of the experience, every piece of communication, every moment of contact — has been consciously made in service of a specific thing the business wants people to feel. Not a list of things. One thing. Expressed everywhere.</p>
+
+<h2>What Premium Feels Like From the Inside</h2>
+<p>From the client's perspective, a premium brand experience has a distinctive quality: it feels like the business already understood what they needed before they explained it. The communication doesn't over-explain. The product doesn't over-deliver in the wrong directions. The service doesn't require the client to manage the provider. Everything works — not perfectly, but thoughtfully. Problems, when they happen, are handled in ways that reinforce confidence rather than eroding it.</p>
+<p>This experience is the result of enormous amounts of internal clarity. Premium brand experiences don't happen by accident. They're the external expression of businesses that have done the difficult work of understanding exactly who they're for, exactly what they're best at, and exactly what they're willing to say no to.</p>
+
+<h2>The Touchpoint Audit</h2>
+<p>The fastest way to understand whether your brand is positioned as premium is to audit every touchpoint — every moment of contact a client has with your business — and ask: does this moment reinforce the feeling we want them to have, or does it undermine it? Most businesses are surprised to find that a small number of touchpoints are doing most of the damage.</p>
+<p>It might be the initial inquiry response — too slow, too casual, too transactional. It might be the proposal format — professional in content but unpresentable in execution. It might be the invoice — functional but graceless. It might be the follow-up after delivery — absent. Each of these moments is an opportunity to either reinforce or contradict everything your visual brand is trying to communicate.</p>
+
+<h2>Premium Is Earned in the Details</h2>
+<p>The businesses that achieve genuine premium positioning do so through an accumulation of details that each individually seem small but collectively create an experience that feels unmistakably considered. The weight of the paper. The line break in the proposal. The specificity of the language in the first email. The timing of the follow-up. The way a problem is framed when it's communicated.</p>
+<p>None of these details requires a large budget. All of them require attention. And the irony of premium positioning is that it often costs less to execute than the alternative — because it replaces volume with precision. You don't need more communications; you need better ones. You don't need more touchpoints; you need every existing one to be right.</p>
+
+<h2>The Price of Premium</h2>
+<p>Here's what premium positioning eventually enables: prices that reflect the actual value of the experience you're delivering. Not arbitrary increases justified by quality claims — but prices that are sustainable because the experience you're providing creates genuine preference, genuine loyalty, and genuine willingness to pay for access to it.</p>
+<p>The path to those prices runs through the work of becoming a brand that genuinely deserves them. That work begins with intentionality — with deciding, clearly, what experience you want every person who encounters your brand to have. And then building backward from that decision to make every touchpoint serve it.</p>
+    `,
+  },
+];
+
+// ─────────────────────────────────────────────────────────────
+// NAVIGATION SIDEBAR
+// ─────────────────────────────────────────────────────────────
+const NAV_LINKS = [
+  { id:"home",     label:"Home" },
+  { id:"work",     label:"Work" },
+  { id:"services", label:"Services" },
+  { id:"blog",     label:"Blog" },
+  { id:"about",    label:"About" },
+  { id:"contact",  label:"Contact" },
+];
+
+function Sidebar({ page, setPage, menuOpen, setMenuOpen }) {
+  const [hovered, setHovered] = useState(null);
+
+  return (
+    <>
+      {/* DESKTOP SIDEBAR */}
+      <aside style={{
+        position:"fixed", left:0, top:0, bottom:0, width:220, zIndex:900,
+        background:"rgba(247,246,242,0.96)", backdropFilter:"blur(20px)",
+        borderRight:`1px solid ${BRAND.border}`,
+        display:"flex", flexDirection:"column", padding:"36px 0",
+        transition:"transform 0.4s ease",
+        // Hide on mobile via CSS class approach
+        "@media(max-width:900px)": { display:"none" },
+      }} className="sidebar-desktop">
+        {/* Logo */}
+        <div style={{ padding:"0 28px", marginBottom:48, cursor:"pointer" }} onClick={() => setPage("home")}>
+          <Logo height={30} />
+        </div>
+
+        {/* Nav Links */}
+        <nav style={{ flex:1, padding:"0 16px" }}>
+          {NAV_LINKS.map(l => {
+            const active = page === l.id || (page.startsWith("work/") && l.id === "work") ||
+              (page.startsWith("blog/") && l.id === "blog") ||
+              (page.startsWith("service/") && l.id === "services");
+            return (
+              <button key={l.id}
+                onClick={() => { setPage(l.id); setMenuOpen(false); }}
+                onMouseEnter={() => setHovered(l.id)}
+                onMouseLeave={() => setHovered(null)}
+                style={{
+                  display:"flex", alignItems:"center", gap:12, width:"100%",
+                  background: active ? BRAND.greenLight : hovered === l.id ? "rgba(10,90,47,0.05)" : "none",
+                  border:"none", cursor:"pointer", padding:"11px 14px", borderRadius:8,
+                  marginBottom:2, transition:"all 0.2s",
+                }}
+              >
+                <div style={{
+                  width:3, height:18, borderRadius:2,
+                  background: active ? BRAND.green : "transparent",
+                  transition:"background 0.2s", flexShrink:0,
+                }} />
+                <span style={{
+                  fontFamily:"'Exo 2', sans-serif", fontWeight: active ? 700 : 500,
+                  fontSize:13, letterSpacing:"0.06em", textTransform:"uppercase",
+                  color: active ? BRAND.green : "#555", transition:"color 0.2s",
+                }}>{l.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Bottom CTA */}
+        <div style={{ padding:"0 16px" }}>
+          <button onClick={() => window.open(WA_URL, "_blank")} style={{
+            width:"100%", background: BRAND.green, color:"#fff",
+            border:"none", cursor:"pointer", padding:"12px 16px",
+            borderRadius:8, fontFamily:"'Exo 2', sans-serif",
+            fontWeight:700, fontSize:11, letterSpacing:"0.14em",
+            textTransform:"uppercase", transition:"background 0.2s",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = BRAND.greenHover}
+            onMouseLeave={e => e.currentTarget.style.background = BRAND.green}
+          >Start a Project</button>
+          <div style={{ marginTop:20, fontSize:10, color:"#bbb", textAlign:"center", letterSpacing:"0.1em", fontFamily:"'Exo 2', sans-serif", textTransform:"uppercase" }}>
+            © 2025 KAIYTEC Creative
+          </div>
+        </div>
+      </aside>
+
+      {/* MOBILE HAMBURGER */}
+      <button
+        onClick={() => setMenuOpen(o => !o)}
+        style={{
+          position:"fixed", top:16, left:16, zIndex:1100,
+          background:"rgba(247,246,242,0.95)", border:`1px solid ${BRAND.border}`,
+          borderRadius:10, width:44, height:44, cursor:"pointer",
+          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:5,
+          backdropFilter:"blur(12px)", boxShadow:"0 4px 20px rgba(0,0,0,0.08)",
+        }}
+        className="hamburger-btn"
+      >
+        {[0,1,2].map(i => (
+          <div key={i} style={{
+            width: i===1 && menuOpen ? 0 : i===2 && menuOpen ? 20 : 20,
+            height:2, background: BRAND.green, borderRadius:1,
+            transform: menuOpen && i===0 ? "rotate(45deg) translate(5px,5px)" :
+                       menuOpen && i===2 ? "rotate(-45deg) translate(5px,-5px)" : "none",
+            transition:"all 0.3s",
+          }} />
+        ))}
+      </button>
+
+      {/* MOBILE MENU OVERLAY */}
+      {menuOpen && (
+        <div style={{
+          position:"fixed", inset:0, zIndex:1050,
+          background:"rgba(0,0,0,0.5)", backdropFilter:"blur(8px)",
+          animation:"fadeIn 0.2s ease",
+        }} onClick={() => setMenuOpen(false)} />
+      )}
+
+      {/* MOBILE SLIDE-IN PANEL */}
+      <div style={{
+        position:"fixed", left:0, top:0, bottom:0, width:280, zIndex:1060,
+        background:"rgba(247,246,242,0.98)", backdropFilter:"blur(20px)",
+        borderRight:`1px solid ${BRAND.border}`,
+        display:"flex", flexDirection:"column", padding:"72px 0 32px",
+        transform: menuOpen ? "translateX(0)" : "translateX(-100%)",
+        transition:"transform 0.38s cubic-bezier(0.4,0,0.2,1)",
+        boxShadow: menuOpen ? "4px 0 40px rgba(0,0,0,0.12)" : "none",
+      }} className="mobile-menu">
+        <div style={{ padding:"0 24px", marginBottom:32 }}>
+          <Logo height={28} />
+        </div>
+        <nav style={{ padding:"0 16px", flex:1 }}>
+          {NAV_LINKS.map(l => (
+            <button key={l.id}
+              onClick={() => { setPage(l.id); setMenuOpen(false); }}
+              style={{
+                display:"block", width:"100%", textAlign:"left",
+                background:"none", border:"none", cursor:"pointer",
+                padding:"14px 16px", borderRadius:8, marginBottom:2,
+                fontFamily:"'Exo 2', sans-serif", fontWeight:600,
+                fontSize:15, letterSpacing:"0.06em", textTransform:"uppercase",
+                color: page === l.id ? BRAND.green : "#444",
+              }}
+            >{l.label}</button>
+          ))}
+        </nav>
+        <div style={{ padding:"0 16px" }}>
+          <button onClick={() => { window.open(WA_URL,"_blank"); setMenuOpen(false); }} style={{
+            width:"100%", background: BRAND.green, color:"#fff",
+            border:"none", cursor:"pointer", padding:"14px",
+            borderRadius:8, fontFamily:"'Exo 2', sans-serif",
+            fontWeight:700, fontSize:12, letterSpacing:"0.12em", textTransform:"uppercase",
+          }}>Start a Project</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// FLOATING WHATSAPP BUTTON
+// ─────────────────────────────────────────────────────────────
+function FloatingWhatsApp() {
+  const [hov, setHov] = useState(false);
+  return (
+    <a href={WA_URL} target="_blank" rel="noopener noreferrer"
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        position:"fixed", bottom:28, right:28, zIndex:800,
+        width: hov ? "auto" : 52, height:52,
+        background:"#25D366", borderRadius: hov ? 26 : "50%",
+        display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+        boxShadow:"0 6px 28px rgba(37,211,102,0.35)",
+        textDecoration:"none", padding: hov ? "0 20px" : "0",
+        transition:"all 0.3s cubic-bezier(0.4,0,0.2,1)",
+        overflow:"hidden", whiteSpace:"nowrap",
+      }}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style={{ flexShrink:0 }}>
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+      </svg>
+      {hov && <span style={{ color:"#fff", fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:12, letterSpacing:"0.08em" }}>Chat with us</span>}
+    </a>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SOCIAL ICONS
+// ─────────────────────────────────────────────────────────────
+const SOCIAL_ICONS = {
+  instagram: "M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z",
+  facebook:  "M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z",
+  linkedin:  "M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z",
+  tiktok:    "M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z",
+};
+
+function SocialIcon({ platform, href, size = 36, light = false }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer"
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display:"inline-flex", textDecoration:"none" }}
+    >
+      <div style={{
+        width:size, height:size, borderRadius:"50%",
+        background: hov ? BRAND.green : light ? "rgba(255,255,255,0.1)" : BRAND.greenLight,
+        border: light ? "1px solid rgba(255,255,255,0.15)" : `1px solid ${BRAND.border}`,
+        display:"flex", alignItems:"center", justifyContent:"center",
+        transition:"all 0.25s ease",
+        transform: hov ? "translateY(-2px)" : "none",
+        boxShadow: hov ? "0 8px 20px rgba(10,90,47,0.25)" : "none",
+      }}>
+        <svg width={size*0.44} height={size*0.44} viewBox="0 0 24 24" fill={hov ? "#fff" : light ? "rgba(255,255,255,0.7)" : BRAND.green} style={{ transition:"fill 0.25s" }}>
+          <path d={SOCIAL_ICONS[platform] || SOCIAL_ICONS.instagram}/>
+        </svg>
+      </div>
+    </a>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// HOME PAGE
+// ─────────────────────────────────────────────────────────────
+function HomePage({ setPage }) {
+  const [tick, setTick] = useState(0);
+  const phrases = [
+    "Making Possibility Real.",
+    "Where Vision Becomes Identity.",
+    "Crafted to Leave an Impression.",
+    "Designing Experiences People Remember.",
+  ];
+  useEffect(() => {
+    const t = setInterval(() => setTick(x => (x+1) % phrases.length), 4000);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div>
+      {/* HERO */}
+      <section style={{
+        minHeight:"100vh", display:"flex", alignItems:"center",
+        background: BRAND.mist, padding:"120px clamp(1.5rem,5vw,4rem) 80px",
+        position:"relative", overflow:"hidden",
+      }}>
+        {/* Ambient orb */}
+        <div style={{
+          position:"absolute", top:"-15%", right:"-8%",
+          width:"60vw", height:"60vw", borderRadius:"50%",
+          background:`radial-gradient(circle, ${BRAND.greenLight} 0%, transparent 65%)`,
+          pointerEvents:"none",
+        }} />
+        <div style={{
+          position:"absolute", bottom:"-20%", left:"-10%",
+          width:"45vw", height:"45vw", borderRadius:"50%",
+          background:`radial-gradient(circle, rgba(10,90,47,0.04) 0%, transparent 70%)`,
+          pointerEvents:"none",
+        }} />
+
+        <div style={{ maxWidth:900, position:"relative", zIndex:1 }}>
+          <div style={{ display:"inline-flex", alignItems:"center", gap:10, background: BRAND.greenLight, border:`1px solid ${BRAND.border}`, borderRadius:40, padding:"6px 18px", marginBottom:44 }}>
+            <div style={{ width:7, height:7, borderRadius:"50%", background: BRAND.green }} />
+            <span style={{ ...T.eyebrow, color: BRAND.green }}>Premium Creative Agency</span>
+          </div>
+
+          <h1 style={{ ...T.h1, marginBottom:8 }}>
+            {phrases[tick].split(" ").map((w, i) => (
+              <span key={`${tick}-${i}`} style={{
+                display:"inline-block", marginRight:"0.22em",
+                animation:"wordFade 0.55s ease forwards",
+                animationDelay:`${i * 0.07}s`, opacity:0,
+              }}>{w}</span>
+            ))}
+          </h1>
+
+          <p style={{ ...T.body, maxWidth:580, marginTop:24, marginBottom:52 }}>
+            We build brands, digital experiences, and creative systems that move people — and move businesses forward.
+          </p>
+
+          <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
+            <button onClick={() => setPage("work")} style={{
+              background: BRAND.green, color:"#fff", border:"none", cursor:"pointer",
+              padding:"16px 38px", borderRadius:4,
+              fontFamily:"'Exo 2', sans-serif", fontWeight:700,
+              fontSize:13, letterSpacing:"0.1em", textTransform:"uppercase",
+              transition:"all 0.2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = BRAND.greenHover; e.currentTarget.style.transform="translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = BRAND.green; e.currentTarget.style.transform="none"; }}
+            >View Our Work</button>
+
+            <button onClick={() => setPage("services")} style={{
+              background:"transparent", color: BRAND.green,
+              border:`2px solid ${BRAND.green}`, cursor:"pointer",
+              padding:"14px 36px", borderRadius:4,
+              fontFamily:"'Exo 2', sans-serif", fontWeight:600,
+              fontSize:13, letterSpacing:"0.1em", textTransform:"uppercase",
+              transition:"all 0.2s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = BRAND.greenLight}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >Explore Services</button>
+          </div>
+
+          <div style={{ display:"flex", gap:48, marginTop:80, flexWrap:"wrap" }}>
+            {[
+              ["Brand Identity","Logo, Systems, Strategy"],
+              ["Digital Experiences","Web, UI/UX, Motion"],
+              ["Creative Direction","Campaigns, Content, Vision"],
+            ].map(([t,s]) => (
+              <div key={t}>
+                <div style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:11, color: BRAND.green, letterSpacing:"0.16em", textTransform:"uppercase" }}>{t}</div>
+                <div style={{ fontFamily:"Georgia, serif", fontSize:12, color: BRAND.textLight, fontStyle:"italic", marginTop:4 }}>{s}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURED CONCEPTS PREVIEW */}
+      <section style={{ background:"#fff", padding:"100px clamp(1.5rem,5vw,4rem)" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto" }}>
+          <Reveal>
+            <SectionLabel text="Featured Work" />
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:60, flexWrap:"wrap", gap:20 }}>
+              <h2 style={T.h2}>Vision brought<br/>to life.</h2>
+              <button onClick={() => setPage("work")} style={{ background:"none", border:`1px solid ${BRAND.border}`, cursor:"pointer", padding:"10px 24px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontWeight:600, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", color: BRAND.green, transition:"all 0.2s" }}
+                onMouseEnter={e => { e.currentTarget.style.background = BRAND.greenLight; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
+              >View All →</button>
+            </div>
+          </Reveal>
+
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:24 }}>
+            {CONCEPTS.slice(0,3).map((c, i) => (
+              <Reveal key={c.slug} delay={i*0.08}>
+                <ConceptCard c={c} setPage={setPage} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SERVICES PREVIEW */}
+      <section style={{ background: BRAND.mist, padding:"100px clamp(1.5rem,5vw,4rem)" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto" }}>
+          <Reveal>
+            <SectionLabel text="What We Do" />
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:60, flexWrap:"wrap", gap:20 }}>
+              <h2 style={T.h2}>Capabilities built<br/>for ambitious brands.</h2>
+              <button onClick={() => setPage("services")} style={{ background:"none", border:`1px solid ${BRAND.border}`, cursor:"pointer", padding:"10px 24px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontWeight:600, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", color: BRAND.green, transition:"all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.background = BRAND.greenLight}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+              >All Services →</button>
+            </div>
+          </Reveal>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:20 }}>
+            {SERVICES.slice(0,6).map((s,i) => (
+              <Reveal key={s.slug} delay={i*0.05}>
+                <ServiceCard s={s} setPage={setPage} compact />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BLOG PREVIEW */}
+      <section style={{ background: BRAND.warm, padding:"100px clamp(1.5rem,5vw,4rem)" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto" }}>
+          <Reveal>
+            <SectionLabel text="Perspectives" />
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:60, flexWrap:"wrap", gap:20 }}>
+              <h2 style={T.h2}>Ideas worth<br/>thinking about.</h2>
+              <button onClick={() => setPage("blog")} style={{ background:"none", border:`1px solid ${BRAND.border}`, cursor:"pointer", padding:"10px 24px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontWeight:600, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", color: BRAND.green, transition:"all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.background = BRAND.greenLight}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+              >All Articles →</button>
+            </div>
+          </Reveal>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:24 }}>
+            {BLOG_POSTS.slice(0,3).map((p,i) => (
+              <Reveal key={p.slug} delay={i*0.07}>
+                <BlogCard p={p} setPage={setPage} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* PROCESS */}
+      <ProcessSection />
+
+      {/* NEWSLETTER */}
+      <NewsletterSection />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONCEPT CARD (used in lists)
+// ─────────────────────────────────────────────────────────────
+function ConceptCard({ c, setPage }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div onClick={() => setPage(`work/${c.slug}`)}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        background: hov ? c.color : "#fff",
+        border:`1px solid ${BRAND.border}`,
+        borderRadius:10, padding:"40px 32px", cursor:"pointer",
+        transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",
+        transform: hov ? "translateY(-6px)" : "none",
+        boxShadow: hov ? "0 24px 60px rgba(0,0,0,0.18)" : "0 2px 12px rgba(0,0,0,0.04)",
+      }}
+    >
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:24 }}>
+        <span style={{ ...T.tag, color: hov ? c.accent : BRAND.green, background: hov ? "rgba(255,255,255,0.1)" : BRAND.sage }}>{c.category}</span>
+        <span style={{ fontSize:20, color: hov ? c.accent : "#ddd", transition:"color 0.3s" }}>→</span>
+      </div>
+      <h3 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:800, fontSize:"clamp(1.4rem,2.2vw,1.8rem)", color: hov ? "#fff" : BRAND.ink, marginBottom:6, lineHeight:1.1 }}>{c.title}</h3>
+      <p style={{ fontFamily:"Georgia, serif", fontSize:13, fontStyle:"italic", color: hov ? "rgba(255,255,255,0.55)" : BRAND.textLight, marginBottom:20 }}>{c.subtitle}</p>
+      <p style={{ fontFamily:"Georgia, serif", fontSize:13.5, color: hov ? "rgba(255,255,255,0.8)" : "#666", lineHeight:1.7, fontStyle:"italic" }}>{c.challenge.slice(0,140)}…</p>
+      <div style={{ marginTop:24, fontFamily:"'Exo 2', sans-serif", fontSize:11, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color: hov ? c.accent : BRAND.green }}>
+        Read Case Study →
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SERVICE CARD
+// ─────────────────────────────────────────────────────────────
+function ServiceCard({ s, setPage, compact = false }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div onClick={() => setPage(`service/${s.slug}`)}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        background: hov ? BRAND.green : "#fff",
+        border:`1px solid ${BRAND.border}`,
+        borderRadius:8, padding: compact ? "28px 22px" : "36px 28px",
+        cursor:"pointer", transition:"all 0.3s ease",
+        transform: hov ? "translateY(-4px)" : "none",
+        boxShadow: hov ? "0 20px 50px rgba(10,90,47,0.18)" : "none",
+      }}
+    >
+      <div style={{ fontSize: compact ? 28 : 32, color: hov ? "rgba(255,255,255,0.7)" : BRAND.green, marginBottom:14 }}>{s.icon}</div>
+      <h3 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize: compact ? 14 : 15, color: hov ? "#fff" : BRAND.ink, marginBottom:10, textTransform:"uppercase", letterSpacing:"0.05em" }}>{s.title}</h3>
+      <p style={{ fontFamily:"Georgia, serif", fontSize:13, color: hov ? "rgba(255,255,255,0.82)" : "#666", lineHeight:1.7, fontStyle:"italic" }}>{s.short}</p>
+      <div style={{ marginTop:20, fontSize:11, fontFamily:"'Exo 2', sans-serif", fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color: hov ? "#fff" : BRAND.green }}>Learn More →</div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// BLOG CARD
+// ─────────────────────────────────────────────────────────────
+function BlogCard({ p, setPage }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div onClick={() => setPage(`blog/${p.slug}`)}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        background:"#fff", border:`1px solid ${BRAND.border}`,
+        borderRadius:8, padding:"32px 28px", cursor:"pointer",
+        transition:"all 0.25s ease",
+        transform: hov ? "translateY(-4px)" : "none",
+        boxShadow: hov ? "0 12px 36px rgba(10,90,47,0.1)" : "none",
+      }}
+    >
+      <span style={T.tag}>{p.tag}</span>
+      <h3 style={{ ...T.h3, fontSize:16, marginTop:16, marginBottom:12 }}>{p.title}</h3>
+      <p style={{ fontFamily:"Georgia, serif", fontSize:13.5, color:"#777", lineHeight:1.7, fontStyle:"italic", marginBottom:18 }}>{p.excerpt}</p>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <span style={{ ...T.small, color:"#bbb" }}>{p.date} · {p.readTime}</span>
+        <span style={{ fontSize:11, fontFamily:"'Exo 2', sans-serif", fontWeight:700, color: BRAND.green, letterSpacing:"0.1em" }}>Read →</span>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROCESS SECTION
+// ─────────────────────────────────────────────────────────────
+function ProcessSection() {
+  const steps = [
+    { n:"01", title:"Discovery",   desc:"We begin every engagement with deep listening. Understanding your business, your audience, and the real problem to be solved." },
+    { n:"02", title:"Strategy",    desc:"Before any design begins, we define positioning, messaging framework, and creative direction that guides every decision." },
+    { n:"03", title:"Creation",    desc:"Where strategy becomes visible. We design with intention — every element chosen for a reason, every pixel considered." },
+    { n:"04", title:"Refinement",  desc:"We present, you respond, we refine. The work gets sharper through honest conversation and precise iteration." },
+    { n:"05", title:"Delivery",    desc:"Final files, guidelines, and handoff materials — organized, documented, and ready for the world." },
+  ];
+  return (
+    <section style={{ background:"#fff", padding:"100px clamp(1.5rem,5vw,4rem)" }}>
+      <div style={{ maxWidth:1200, margin:"0 auto" }}>
+        <Reveal>
+          <SectionLabel text="How We Work" />
+          <h2 style={{ ...T.h2, marginBottom:64 }}>A process that<br/>protects your vision.</h2>
+        </Reveal>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(190px, 1fr))", gap:0 }}>
+          {steps.map((s,i) => (
+            <Reveal key={s.n} delay={i*0.1}>
+              <div style={{ borderTop:`2px solid ${i===0 ? BRAND.green : BRAND.border}`, paddingTop:24, paddingRight:20, paddingBottom:24, transition:"border-color 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.borderTopColor = BRAND.green}
+                onMouseLeave={e => { if(i!==0) e.currentTarget.style.borderTopColor = BRAND.border; }}
+              >
+                <div style={{ fontFamily:"'Exo 2', sans-serif", fontSize:34, fontWeight:800, color: BRAND.greenLight, marginBottom:10 }}>{s.n}</div>
+                <div style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:13, color: BRAND.ink, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>{s.title}</div>
+                <p style={{ fontFamily:"Georgia, serif", fontSize:13, color:"#777", lineHeight:1.7, fontStyle:"italic" }}>{s.desc}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// NEWSLETTER SECTION
+// ─────────────────────────────────────────────────────────────
+ const submit = async () => {
+    if (!email || !email.includes("@")) return;
+    setState("loading");
+    try {
+      await fetch("https://formspree.io/f/xlgzqpkl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          _subject: "Newsletter Signup — KAIYTEC Creative",
+          email: email,
+        }),
+      });
+    } catch {}
+    setState("done");
+  };
+  return (
+    <section style={{ background: BRAND.green, padding:"100px clamp(1.5rem,5vw,4rem)", position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute", top:"-30%", left:"-8%", width:"50vw", height:"50vw", borderRadius:"50%", background:"rgba(255,255,255,0.03)", pointerEvents:"none" }} />
+      <div style={{ maxWidth:640, margin:"0 auto", textAlign:"center", position:"relative", zIndex:1 }}>
+        <Reveal>
+          <span style={{ fontFamily:"'Exo 2', sans-serif", fontSize:11, fontWeight:700, letterSpacing:"0.22em", textTransform:"uppercase", color:"rgba(255,255,255,0.55)", display:"block", marginBottom:20 }}>Stay Inspired</span>
+          <h2 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:800, fontSize:"clamp(1.8rem,3vw,2.6rem)", color:"#fff", marginBottom:16, lineHeight:1.15 }}>Creative thinking,<br/>delivered monthly.</h2>
+          <p style={{ fontFamily:"Georgia, serif", fontSize:16, color:"rgba(255,255,255,0.7)", lineHeight:1.8, fontStyle:"italic", marginBottom:40 }}>Brand strategy, design insights, and creative perspectives for founders and brand builders who think seriously about their work.</p>
+          {state === "done" ? (
+            <div style={{ background:"rgba(255,255,255,0.12)", borderRadius:8, padding:"20px 32px", border:"1px solid rgba(255,255,255,0.2)" }}>
+              <span style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:700, color:"#fff", letterSpacing:"0.06em" }}>✓ You're on the list. Welcome.</span>
+            </div>
+          ) : (
+            <div style={{ display:"flex", gap:12, maxWidth:480, margin:"0 auto", flexWrap:"wrap" }}>
+              <input type="email" placeholder="Your email address" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key==="Enter" && submit()} style={{ flex:1, padding:"15px 18px", borderRadius:4, border:"1px solid rgba(255,255,255,0.22)", background:"rgba(255,255,255,0.1)", color:"#fff", fontFamily:"'Exo 2', sans-serif", fontSize:13, outline:"none", minWidth:180 }} />
+              <button onClick={submit} disabled={state==="loading"} style={{ background:"#fff", color: BRAND.green, border:"none", cursor:"pointer", padding:"15px 26px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", opacity: state==="loading" ? 0.7 : 1, transition:"opacity 0.2s" }}>{state==="loading" ? "…" : "Subscribe"}</button>
+            </div>
+          )}
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// WORK PAGE
+// ─────────────────────────────────────────────────────────────
+function WorkPage({ setPage }) {
+  return (
+    <div style={{ paddingTop:80 }}>
+      <section style={{ background: BRAND.mist, padding:"80px clamp(1.5rem,5vw,4rem) 100px" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto" }}>
+          <Reveal>
+            <SectionLabel text="Featured Concepts" />
+            <h1 style={{ ...T.h1, marginBottom:20 }}>Strategic explorations<br/>& creative direction.</h1>
+            <p style={{ ...T.body, maxWidth:560, marginBottom:64 }}>These are honest creative explorations — strategic and visual concepts that demonstrate how KAIYTEC Creative approaches real brand challenges across industries.</p>
+          </Reveal>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(340px, 1fr))", gap:28 }}>
+            {CONCEPTS.map((c,i) => (
+              <Reveal key={c.slug} delay={i*0.07}>
+                <ConceptCard c={c} setPage={setPage} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONCEPT DETAIL PAGE
+// ─────────────────────────────────────────────────────────────
+function ConceptDetailPage({ slug, setPage }) {
+  const c = CONCEPTS.find(x => x.slug === slug);
+  useEffect(() => { window.scrollTo(0,0); }, [slug]);
+  if (!c) return <div style={{ padding:120, textAlign:"center", fontFamily:"'Exo 2', sans-serif" }}>Project not found. <button onClick={() => setPage("work")} style={{ color: BRAND.green, background:"none", border:"none", cursor:"pointer" }}>← Back</button></div>;
+
+  return (
+    <div style={{ paddingTop:60 }}>
+      {/* CINEMATIC HERO */}
+      <section style={{
+        background: c.color, minHeight:"80vh",
+        display:"flex", flexDirection:"column", justifyContent:"flex-end",
+        padding:"0 clamp(1.5rem,6vw,5rem) 80px", position:"relative", overflow:"hidden",
+      }}>
+        {/* Ambient glow */}
+        <div style={{ position:"absolute", top:"20%", right:"-5%", width:"40vw", height:"40vw", borderRadius:"50%", background:`radial-gradient(circle, ${c.accent}22 0%, transparent 70%)`, pointerEvents:"none" }} />
+        <div style={{ position:"absolute", bottom:"10%", left:"-5%", width:"30vw", height:"30vw", borderRadius:"50%", background:`radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%)`, pointerEvents:"none" }} />
+
+        <div style={{ maxWidth:1100, position:"relative", zIndex:1 }}>
+          <button onClick={() => setPage("work")} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.7)", cursor:"pointer", padding:"8px 18px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:48, transition:"all 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.15)"}
+            onMouseLeave={e => e.currentTarget.style.background="rgba(255,255,255,0.1)"}
+          >← All Work</button>
+
+          <div style={{ marginBottom:24 }}>
+            <span style={{ ...T.tag, color: c.accent, background:"rgba(255,255,255,0.1)", border:`1px solid ${c.accent}44` }}>{c.category}</span>
+            <span style={{ ...T.small, color:"rgba(255,255,255,0.4)", marginLeft:16 }}>{c.year}</span>
+          </div>
+
+          <h1 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:800, fontSize:"clamp(3rem,7vw,6rem)", color:"#fff", lineHeight:1.0, marginBottom:16, letterSpacing:"-0.02em" }}>{c.title}</h1>
+          <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(1rem,1.6vw,1.2rem)", color:"rgba(255,255,255,0.6)", fontStyle:"italic", maxWidth:560, lineHeight:1.8, marginBottom:48 }}>{c.subtitle}</p>
+
+          {/* Tags */}
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+            {c.tags.map(tag => (
+              <span key={tag} style={{ fontFamily:"'Exo 2', sans-serif", fontSize:10, fontWeight:600, letterSpacing:"0.12em", textTransform:"uppercase", color:"rgba(255,255,255,0.5)", border:"1px solid rgba(255,255,255,0.12)", padding:"4px 12px", borderRadius:20 }}>{tag}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* COLOR PALETTE */}
+      <section style={{ background:"#fff", padding:"60px clamp(1.5rem,5vw,4rem)" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <Reveal>
+            <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+              <span style={{ fontFamily:"'Exo 2', sans-serif", fontSize:11, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#bbb" }}>Brand Palette</span>
+              <div style={{ flex:1, height:1, background: BRAND.border }} />
+            </div>
+            <div style={{ display:"flex", gap:12, marginTop:20, flexWrap:"wrap" }}>
+              {c.palette.map((col, i) => (
+                <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+                  <div style={{ width:56, height:56, borderRadius:10, background:col, boxShadow:"0 3px 12px rgba(0,0,0,0.12)", border:"1px solid rgba(0,0,0,0.06)" }} />
+                  <span style={{ fontFamily:"'Exo 2', sans-serif", fontSize:9, color:"#999", letterSpacing:"0.1em" }}>{col}</span>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* CASE STUDY SECTIONS */}
+      <section style={{ background: BRAND.mist, padding:"80px clamp(1.5rem,5vw,4rem)" }}>
+        <div style={{ maxWidth:800, margin:"0 auto" }}>
+          {[
+            ["The Challenge",       c.challenge],
+            ["Research & Insights", c.research],
+            ["Proposed Solution",   c.solution],
+            ["Creative Direction",  c.direction],
+            ["Brand Strategy",      c.branding],
+            ["Digital Experience",  c.digital],
+            ["Communication Direction", c.marketing],
+            ["Expected Impact",     c.impact],
+          ].map(([label, text], i) => (
+            <Reveal key={label} delay={0.05}>
+              <div style={{ marginBottom:56, borderLeft:`3px solid ${i===0 ? BRAND.green : BRAND.border}`, paddingLeft:28, transition:"border-color 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.borderLeftColor = BRAND.green}
+                onMouseLeave={e => { if(i!==0) e.currentTarget.style.borderLeftColor = BRAND.border; }}
+              >
+                <div style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:10, letterSpacing:"0.22em", textTransform:"uppercase", color: BRAND.green, marginBottom:14 }}>{label}</div>
+                <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(0.95rem,1.3vw,1.05rem)", color:"#444", lineHeight:1.9, fontStyle:"italic" }}>{text}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section style={{ background: BRAND.green, padding:"80px clamp(1.5rem,5vw,4rem)", textAlign:"center" }}>
+        <Reveal>
+          <h2 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:800, fontSize:"clamp(1.8rem,3.5vw,2.8rem)", color:"#fff", marginBottom:16 }}>Have a project in mind?</h2>
+          <p style={{ fontFamily:"Georgia, serif", fontSize:16, color:"rgba(255,255,255,0.7)", fontStyle:"italic", marginBottom:36, maxWidth:480, margin:"0 auto 36px" }}>Let's build something worth remembering together.</p>
+          <button onClick={() => setPage("contact")} style={{ background:"#fff", color: BRAND.green, border:"none", cursor:"pointer", padding:"16px 40px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:13, letterSpacing:"0.1em", textTransform:"uppercase", transition:"all 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.transform="translateY(-2px)"}
+            onMouseLeave={e => e.currentTarget.style.transform="none"}
+          >Start a Conversation →</button>
+        </Reveal>
+      </section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SERVICES PAGE
+// ─────────────────────────────────────────────────────────────
+function ServicesPage({ setPage }) {
+  return (
+    <div style={{ paddingTop:80 }}>
+      <section style={{ background: BRAND.mist, padding:"80px clamp(1.5rem,5vw,4rem) 100px" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto" }}>
+          <Reveal>
+            <SectionLabel text="What We Do" />
+            <h1 style={{ ...T.h1, marginBottom:20 }}>Every capability.<br/>One standard.</h1>
+            <p style={{ ...T.body, maxWidth:520, marginBottom:72 }}>From brand identity to full digital marketing systems — every service is delivered with the same commitment to strategic intelligence and creative excellence.</p>
+          </Reveal>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(290px, 1fr))", gap:24 }}>
+            {SERVICES.map((s,i) => (
+              <Reveal key={s.slug} delay={i*0.04}>
+                <ServiceCard s={s} setPage={setPage} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+      <ProcessSection />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SERVICE DETAIL PAGE
+// ─────────────────────────────────────────────────────────────
+function ServiceDetailPage({ slug, setPage }) {
+  const s = SERVICES.find(x => x.slug === slug);
+  useEffect(() => { window.scrollTo(0,0); }, [slug]);
+  if (!s) return null;
+
+  const details = {
+    "brand-identity": {
+      what:"A complete brand identity system is the foundation of every great brand. It's the visual language that communicates who you are before a word is read — and ensures that every touchpoint of your business feels coherent, intentional, and premium.",
+      includes:["Primary logo design with multiple concept directions","Logo variations — horizontal, vertical, icon-only, one-color","Complete color system — primary, secondary, accent, neutral","Typography selection — headline, body, and supporting typefaces","Brand guidelines document — comprehensive usage rules","Favicon, app icon, and social profile versions","File delivery — PNG, SVG, PDF in all required sizes and configurations"],
+      process:"Discovery and brand audit → Strategy and positioning brief → Concept development → Presentation and refinement → Finalization and guidelines → Delivery package",
+      ideal:"New businesses establishing their identity from scratch. Established brands requiring a strategic rebrand. Businesses that have outgrown their original visual identity.",
+    },
+    "website-design": {
+      what:"A website is not a brochure. It's a 24-hour sales environment, a credibility anchor, and often the first significant interaction a potential client has with your brand. We build websites that perform — commercially and aesthetically.",
+      includes:["Full website strategy and information architecture","Responsive design — mobile, tablet, laptop, ultrawide","Custom UI design with your brand system integrated","Content strategy and copywriting direction","SEO foundation — structure, metadata, speed optimization","CMS integration for easy content management","Quality assurance across devices and browsers"],
+      process:"Sitemap and architecture → Wireframes and user flow → Visual design → Development → Content integration → Testing and launch",
+      ideal:"Businesses launching a new digital presence. Brands whose websites no longer reflect their quality. Product companies needing conversion-focused digital experiences.",
+    },
+  };
+
+  const d = details[slug] || {
+    what:`${s.title} is a core capability within KAIYTEC Creative's service offering. Every engagement begins with a strategic brief and ends with deliverables that are built to perform — not just to impress.`,
+    includes:["Strategic briefing and research phase","Concept development and creative direction","Execution with premium tools and methodology","Revision and refinement process","Final delivery with guidelines","Ongoing support where required"],
+    process:"Brief → Strategy → Creation → Refinement → Delivery",
+    ideal:"Businesses and brands seeking world-class creative work delivered with strategic intelligence.",
+  };
+
+  return (
+    <div style={{ paddingTop:80 }}>
+      <section style={{ background: BRAND.ink, padding:"80px clamp(1.5rem,5vw,4rem) 100px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:"-20%", right:"-10%", width:"50vw", height:"50vw", borderRadius:"50%", background:`radial-gradient(circle, ${BRAND.greenLight}08 0%, transparent 70%)`, pointerEvents:"none" }} />
+        <div style={{ maxWidth:900, position:"relative", zIndex:1 }}>
+          <button onClick={() => setPage("services")} style={{ background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.5)", cursor:"pointer", padding:"8px 18px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:48 }}>← All Services</button>
+          <span style={{ ...T.tag, color:"rgba(255,255,255,0.5)", background:"rgba(255,255,255,0.06)", marginBottom:20, display:"inline-block" }}>Service</span>
+          <h1 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:800, fontSize:"clamp(2.2rem,5vw,4rem)", color:"#fff", lineHeight:1.08, marginBottom:24, letterSpacing:"-0.01em" }}>{s.title}</h1>
+          <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(1rem,1.5vw,1.15rem)", color:"rgba(255,255,255,0.6)", fontStyle:"italic", lineHeight:1.85, maxWidth:560 }}>{d.what}</p>
+        </div>
+      </section>
+
+      <section style={{ background:"#fff", padding:"80px clamp(1.5rem,5vw,4rem)" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:64, alignItems:"start" }}>
+          <Reveal>
+            <SectionLabel text="What's Included" />
+            <div style={{ marginTop:24 }}>
+              {d.includes.map((item, i) => (
+                <div key={i} style={{ display:"flex", gap:14, alignItems:"flex-start", marginBottom:16 }}>
+                  <div style={{ width:6, height:6, borderRadius:"50%", background: BRAND.green, marginTop:7, flexShrink:0 }} />
+                  <p style={{ fontFamily:"Georgia, serif", fontSize:14.5, color:"#444", lineHeight:1.75, fontStyle:"italic" }}>{item}</p>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <div>
+              <SectionLabel text="Our Process" />
+              <p style={{ ...T.body, fontSize:14.5, marginTop:16, marginBottom:40 }}>{d.process}</p>
+              <SectionLabel text="Ideal For" />
+              <p style={{ ...T.body, fontSize:14.5, marginTop:16, marginBottom:48 }}>{d.ideal}</p>
+              <button onClick={() => setPage("contact")} style={{ background: BRAND.green, color:"#fff", border:"none", cursor:"pointer", padding:"15px 32px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", transition:"all 0.2s" }}
+                onMouseEnter={e => { e.currentTarget.style.background = BRAND.greenHover; e.currentTarget.style.transform="translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = BRAND.green; e.currentTarget.style.transform="none"; }}
+              >Request a Consultation →</button>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// BLOG LIST PAGE
+// ─────────────────────────────────────────────────────────────
+function BlogPage({ setPage }) {
+  return (
+    <div style={{ paddingTop:80 }}>
+      <section style={{ background: BRAND.warm, padding:"80px clamp(1.5rem,5vw,4rem) 100px" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto" }}>
+          <Reveal>
+            <SectionLabel text="Perspectives" />
+            <h1 style={{ ...T.h1, marginBottom:20 }}>Ideas worth<br/>thinking about.</h1>
+            <p style={{ ...T.body, maxWidth:520, marginBottom:72 }}>Strategy, craft, and creative thinking — written for founders, marketers, and curious minds who care about building things that last.</p>
+          </Reveal>
+
+          {/* Featured Article */}
+          <Reveal>
+            <div onClick={() => setPage(`blog/${BLOG_POSTS[0].slug}`)} style={{ background: BRAND.green, borderRadius:10, padding:"clamp(2.5rem,5vw,4rem)", marginBottom:36, cursor:"pointer", transition:"transform 0.2s", }}
+              onMouseEnter={e => e.currentTarget.style.transform="translateY(-4px)"}
+              onMouseLeave={e => e.currentTarget.style.transform="none"}
+            >
+              <span style={{ fontFamily:"'Exo 2', sans-serif", fontSize:10, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:"rgba(255,255,255,0.5)", display:"block", marginBottom:20 }}>{BLOG_POSTS[0].tag} · {BLOG_POSTS[0].date} · {BLOG_POSTS[0].readTime}</span>
+              <h2 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:800, fontSize:"clamp(1.5rem,3vw,2.6rem)", color:"#fff", lineHeight:1.12, marginBottom:18 }}>{BLOG_POSTS[0].title}</h2>
+              <p style={{ fontFamily:"Georgia, serif", fontSize:16, color:"rgba(255,255,255,0.72)", lineHeight:1.8, fontStyle:"italic", maxWidth:560, marginBottom:28 }}>{BLOG_POSTS[0].excerpt}</p>
+              <span style={{ fontFamily:"'Exo 2', sans-serif", fontSize:12, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:"#fff" }}>Read Article →</span>
+            </div>
+          </Reveal>
+
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:24 }}>
+            {BLOG_POSTS.slice(1).map((p,i) => (
+              <Reveal key={p.slug} delay={i*0.07}>
+                <BlogCard p={p} setPage={setPage} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// BLOG ARTICLE PAGE
+// ─────────────────────────────────────────────────────────────
+function BlogArticlePage({ slug, setPage }) {
+  const post = BLOG_POSTS.find(x => x.slug === slug);
+  const related = BLOG_POSTS.filter(x => x.slug !== slug).slice(0,2);
+  useEffect(() => { window.scrollTo(0,0); }, [slug]);
+  if (!post) return null;
+
+  return (
+    <div style={{ paddingTop:72 }}>
+      {/* Hero */}
+      <section style={{ background: post.hero, padding:"80px clamp(1.5rem,5vw,4rem) 60px" }}>
+        <div style={{ maxWidth:780, margin:"0 auto" }}>
+          <button onClick={() => setPage("blog")} style={{ background:"none", border:`1px solid ${BRAND.border}`, color:"#999", cursor:"pointer", padding:"8px 16px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:40 }}>← All Articles</button>
+          <span style={T.tag}>{post.tag}</span>
+          <h1 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:800, fontSize:"clamp(1.9rem,4.5vw,3.2rem)", color: BRAND.ink, lineHeight:1.1, marginTop:20, marginBottom:20 }}>{post.title}</h1>
+          <div style={{ display:"flex", gap:24, alignItems:"center", flexWrap:"wrap" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ width:32, height:32, borderRadius:"50%", background: BRAND.green, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <Logo variant="mark" height={18} forceWhite />
+              </div>
+              <span style={{ fontFamily:"'Exo 2', sans-serif", fontSize:12, color:"#555", fontWeight:600 }}>KAIYTEC Creative</span>
+            </div>
+            <span style={{ ...T.small }}>{post.date} · {post.readTime}</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Article body */}
+      <section style={{ background:"#fff", padding:"72px clamp(1.5rem,5vw,4rem)" }}>
+        <div style={{ maxWidth:720, margin:"0 auto" }}>
+          <div style={{ fontFamily:"Georgia, serif", fontSize:"clamp(1rem,1.35vw,1.08rem)", lineHeight:1.9, color:"#333" }}
+            dangerouslySetInnerHTML={{ __html: post.body.replace(/<h2>/g, `<h2 style="font-family:'Exo 2',sans-serif;font-weight:800;font-size:clamp(1.3rem,2.2vw,1.7rem);color:${BRAND.ink};margin-top:52px;margin-bottom:18px;letter-spacing:-0.01em">`).replace(/<p>/g, `<p style="margin-bottom:22px;font-style:italic">`) }}
+          />
+        </div>
+
+        {/* Social share */}
+        <div style={{ maxWidth:720, margin:"56px auto 0", borderTop:`1px solid ${BRAND.border}`, paddingTop:32, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:16 }}>
+          <span style={{ fontFamily:"'Exo 2', sans-serif", fontSize:11, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color: BRAND.green }}>Share This Article</span>
+          <div style={{ display:"flex", gap:10 }}>
+            {(["instagram","linkedin","facebook","tiktok"]).map(p => (
+              <SocialIcon key={p} platform={p} href={SOCIAL[p]} size={36} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Related articles */}
+      <section style={{ background: BRAND.warm, padding:"72px clamp(1.5rem,5vw,4rem)" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto" }}>
+          <SectionLabel text="Continue Reading" />
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:24, marginTop:32 }}>
+            {related.map(p => <BlogCard key={p.slug} p={p} setPage={setPage} />)}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// ABOUT PAGE
+// ─────────────────────────────────────────────────────────────
+function AboutPage({ setPage }) {
+  const values = [
+    { icon:"◈", title:"Making Possibility Real",     desc:"Every project is an opportunity to unlock something the client couldn't see before. We approach every brief with that commitment." },
+    { icon:"◎", title:"Excellence Without Excuses",  desc:"We deliver global-quality work regardless of budget or timeline. The standard doesn't change. The approach adapts." },
+    { icon:"◻", title:"Honesty First",               desc:"We tell clients the truth, even when it's uncomfortable. Clear, direct communication is the foundation of every great creative partnership." },
+    { icon:"◬", title:"Creative Innovation",         desc:"We never copy. Every project is an original creative act — informed by research, strategy, and a genuine desire to build something that matters." },
+  ];
+  return (
+    <div style={{ paddingTop:80 }}>
+      <section style={{ background: BRAND.mist, padding:"80px clamp(1.5rem,5vw,4rem) 100px" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1fr", gap:80, alignItems:"center" }}>
+          <Reveal>
+            <SectionLabel text="Who We Are" />
+            <h1 style={{ ...T.h1, fontSize:"clamp(2.2rem,4.5vw,3.8rem)", marginBottom:28 }}>Creative systems built<br/>for modern brands.</h1>
+            <p style={{ ...T.body, marginBottom:20 }}>KAIYTEC Creative is a full-service branding and digital experience agency. We combine strategic thinking, human creativity, and the best of modern tools to produce work that is visually powerful and commercially intelligent.</p>
+            <p style={{ ...T.body, marginBottom:40 }}>We believe every brand deserves world-class creative. Our process is rigorous, our standards are uncompromising, and our commitment to every client is absolute.</p>
+            <button onClick={() => setPage("contact")} style={{ background: BRAND.green, color:"#fff", border:"none", cursor:"pointer", padding:"15px 32px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", transition:"all 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = BRAND.greenHover; e.currentTarget.style.transform="translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = BRAND.green; e.currentTarget.style.transform="none"; }}
+            >Start a Conversation →</button>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <div style={{ background: BRAND.green, borderRadius:12, padding:"clamp(2rem,4vw,3.5rem)", position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"absolute", top:"-20%", right:"-10%", width:"60%", height:"60%", borderRadius:"50%", background:"rgba(255,255,255,0.04)", pointerEvents:"none" }} />
+              <Logo height={44} forceWhite />
+              <p style={{ fontFamily:"Georgia, serif", fontSize:"clamp(1rem,1.5vw,1.15rem)", color:"rgba(255,255,255,0.75)", fontStyle:"italic", lineHeight:1.9, marginTop:28, position:"relative" }}>
+                "We build brands and digital experiences that move people — and move businesses forward. Not just work that looks good. Work that does something."
+              </p>
+              <div style={{ marginTop:28, borderTop:"1px solid rgba(255,255,255,0.12)", paddingTop:20 }}>
+                <div style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:13, color:"rgba(255,255,255,0.5)", letterSpacing:"0.08em", textTransform:"uppercase" }}>KAIYTEC Creative</div>
+                <div style={{ fontFamily:"Georgia, serif", fontSize:12, color:"rgba(255,255,255,0.35)", fontStyle:"italic", marginTop:4 }}>Making Possibility Real</div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* VALUES */}
+      <section style={{ background:"#fff", padding:"100px clamp(1.5rem,5vw,4rem)" }}>
+        <div style={{ maxWidth:1200, margin:"0 auto" }}>
+          <Reveal>
+            <SectionLabel text="Our Values" />
+            <h2 style={{ ...T.h2, marginBottom:60 }}>The principles<br/>that guide us.</h2>
+          </Reveal>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:28 }}>
+            {values.map((v, i) => (
+              <Reveal key={v.title} delay={i*0.08}>
+                <div style={{ padding:"36px 28px", background: BRAND.mist, border:`1px solid ${BRAND.border}`, borderRadius:8 }}>
+                  <div style={{ fontSize:28, color: BRAND.green, marginBottom:16 }}>{v.icon}</div>
+                  <h3 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:14, color: BRAND.ink, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:12 }}>{v.title}</h3>
+                  <p style={{ fontFamily:"Georgia, serif", fontSize:13.5, color:"#666", lineHeight:1.75, fontStyle:"italic" }}>{v.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTACT PAGE
+// ─────────────────────────────────────────────────────────────
+ const send = async () => {
+    if (!form.name || !form.email || !form.message) return;
+    setLoading(true);
+    try {
+      await fetch("https://formspree.io/f/xlgzqpkl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          _subject: "New Enquiry — KAIYTEC Creative",
+          name: form.name,
+          email: form.email,
+          service: form.service,
+          message: form.message,
+        }),
+      });
+      setSent(true);
+    } catch {
+      alert("Something went wrong. Please email hello@kaiytec.com directly.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ paddingTop:80 }}>
+      <section style={{ background: BRAND.mist, padding:"80px clamp(1.5rem,5vw,4rem) 100px" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1.1fr", gap:72, alignItems:"start" }}>
+          <Reveal>
+            <SectionLabel text="Start a Conversation" />
+            <h1 style={{ ...T.h1, fontSize:"clamp(2rem,4vw,3.2rem)", marginBottom:24 }}>Let's build something<br/>worth remembering.</h1>
+            <p style={{ ...T.body, marginBottom:52 }}>Whether you're launching a new brand, rethinking an existing one, or looking for a creative partner for the long term — we'd love to hear about your vision.</p>
+
+            {[["Email","hello@kaiytec.com"],["Response Time","Within 24 hours"],["Engagements","Remote-First · Global"]].map(([l,v]) => (
+              <div key={l} style={{ marginBottom:22 }}>
+                <div style={{ fontFamily:"'Exo 2', sans-serif", fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color: BRAND.green, marginBottom:5 }}>{l}</div>
+                <div style={{ fontFamily:"Georgia, serif", fontSize:15, color:"#555", fontStyle:"italic" }}>{v}</div>
+              </div>
+            ))}
+
+            <div style={{ display:"flex", gap:10, marginTop:36, flexWrap:"wrap" }}>
+              {Object.entries(SOCIAL).slice(0,4).map(([k, href]) => (
+                SOCIAL_ICONS[k] ? <SocialIcon key={k} platform={k} href={href} size={38} /> : null
+              ))}
+            </div>
+
+            {/* WhatsApp direct CTA */}
+            <a href={WA_URL} target="_blank" rel="noopener noreferrer" style={{
+              display:"inline-flex", alignItems:"center", gap:12, marginTop:32,
+              background:"#25D366", color:"#fff", textDecoration:"none",
+              padding:"12px 22px", borderRadius:8,
+              fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:12, letterSpacing:"0.08em", textTransform:"uppercase",
+              transition:"all 0.2s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.transform="translateY(-2px)"}
+              onMouseLeave={e => e.currentTarget.style.transform="none"}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+              Chat on WhatsApp
+            </a>
+          </Reveal>
+
+          <Reveal delay={0.18}>
+            {sent ? (
+              <div style={{ background: BRAND.greenLight, border:`1px solid rgba(10,90,47,0.2)`, borderRadius:10, padding:"56px 40px", textAlign:"center" }}>
+                <div style={{ fontSize:52, marginBottom:18 }}>✓</div>
+                <h3 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:800, fontSize:22, color: BRAND.green, marginBottom:12 }}>Message Received.</h3>
+                <p style={{ fontFamily:"Georgia, serif", fontSize:15, color:"#555", fontStyle:"italic", lineHeight:1.8 }}>We'll review your project details and be in touch within 24 hours. Thank you for reaching out.</p>
+              </div>
+            ) : (
+              <div style={{ background:"#fff", borderRadius:10, padding:"clamp(1.8rem,4vw,3rem)", border:`1px solid ${BRAND.border}` }}>
+                <h3 style={{ fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:16, color: BRAND.ink, marginBottom:28, textTransform:"uppercase", letterSpacing:"0.07em" }}>Request a Consultation</h3>
+                {[
+                  { k:"name", l:"Your Name", t:"text", ph:"Full name" },
+                  { k:"email", l:"Email Address", t:"email", ph:"your@email.com" },
+                  { k:"service", l:"Service Interest", t:"text", ph:"e.g. Brand Identity, Website..." },
+                ].map(f => (
+                  <div key={f.k} style={{ marginBottom:20 }}>
+                    <label style={{ fontFamily:"'Exo 2', sans-serif", fontSize:10, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color: BRAND.green, display:"block", marginBottom:8 }}>{f.l}</label>
+                    <input type={f.t} placeholder={f.ph} value={form[f.k]} onChange={e => setForm({...form,[f.k]:e.target.value})} style={{ width:"100%", padding:"13px 15px", borderRadius:4, border:`1px solid ${BRAND.border}`, background: BRAND.mist, fontFamily:"Georgia, serif", fontSize:13.5, color: BRAND.ink, outline:"none", boxSizing:"border-box" }} />
+                  </div>
+                ))}
+                <div style={{ marginBottom:28 }}>
+                  <label style={{ fontFamily:"'Exo 2', sans-serif", fontSize:10, fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color: BRAND.green, display:"block", marginBottom:8 }}>Tell Us About Your Vision</label>
+                  <textarea placeholder="Describe your project, brand, and goals…" value={form.message} onChange={e => setForm({...form,message:e.target.value})} rows={5} style={{ width:"100%", padding:"13px 15px", borderRadius:4, border:`1px solid ${BRAND.border}`, background: BRAND.mist, fontFamily:"Georgia, serif", fontSize:13.5, color: BRAND.ink, outline:"none", resize:"vertical", boxSizing:"border-box" }} />
+                </div>
+                <button onClick={send} disabled={loading} style={{ width:"100%", background: loading ? "#aaa" : BRAND.green, color:"#fff", border:"none", cursor: loading ? "default" : "pointer", padding:"16px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:13, letterSpacing:"0.1em", textTransform:"uppercase", transition:"background 0.2s" }}
+                  onMouseEnter={e => { if(!loading) e.currentTarget.style.background = BRAND.greenHover; }}
+                  onMouseLeave={e => { if(!loading) e.currentTarget.style.background = BRAND.green; }}
+                >{loading ? "Sending…" : "Send Message →"}</button>
+              </div>
+            )}
+          </Reveal>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADMIN DASHBOARD
+// ─────────────────────────────────────────────────────────────
+function AdminPage({ onClose }) {
+  const [authed, setAuthed] = useState(false);
+  const [pw, setPw] = useState("");
+  const [tab, setTab] = useState("overview");
+  const [err, setErr] = useState("");
+
+  // In production: replace with Supabase Auth
+  const login = () => {
+    if (pw === "kaiytec2025") { setAuthed(true); setErr(""); }
+    else setErr("Incorrect password. Try again.");
+  };
+
+  if (!authed) return (
+    <div style={{ position:"fixed", inset:0, zIndex:3000, background:"#0D0D0D", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ background:"#1a1a1a", border:"1px solid rgba(10,90,47,0.2)", borderRadius:12, padding:"52px 44px", width:"100%", maxWidth:420, textAlign:"center" }}>
+        <Logo height={36} forceWhite />
+        <p style={{ fontFamily:"Georgia, serif", fontSize:14, color:"rgba(255,255,255,0.4)", fontStyle:"italic", margin:"20px 0 36px" }}>Admin Access Required</p>
+        <input type="password" placeholder="Password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key==="Enter" && login()} style={{ width:"100%", padding:"13px 16px", borderRadius:4, border:"1px solid rgba(255,255,255,0.1)", background:"rgba(255,255,255,0.05)", color:"#fff", fontFamily:"'Exo 2', sans-serif", fontSize:13, outline:"none", boxSizing:"border-box", marginBottom:14 }} />
+        {err && <p style={{ color:"#ff6b6b", fontSize:12, fontFamily:"'Exo 2', sans-serif", marginBottom:12 }}>{err}</p>}
+        <button onClick={login} style={{ width:"100%", background: BRAND.green, color:"#fff", border:"none", cursor:"pointer", padding:"13px", borderRadius:4, fontFamily:"'Exo 2', sans-serif", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase" }}>Enter Dashboard</button>
+        <button onClick={onClose} style={{ marginTop:16, background:"none", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.3)", fontFamily:"'Exo 2', sans-serif", fontSize:12 }}>← Return to Site</button>
+      </div>
+    </div>
+  );
+
+  const tabs = ["overview","concepts","blog","services","newsletter","settings"];
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:3000, background:"#0D0D0D", color:"#fff", display:"flex", fontFamily:"'Exo 2', sans-serif", animation:"fadeIn 0.3s ease" }}>
+      {/* Sidebar */}
+      <div style={{ width:210, background:"#111", borderRight:"1px solid rgba(255,255,255,0.06)", padding:"28px 0", display:"flex", flexDirection:"column", flexShrink:0 }}>
+        <div style={{ padding:"0 20px", marginBottom:36 }}>
+          <Logo height={26} forceWhite />
+          <div style={{ fontSize:10, letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(255,255,255,0.25)", marginTop:6 }}>Admin Panel</div>
+        </div>
+        <div style={{ flex:1, padding:"0 12px" }}>
+          {tabs.map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{ display:"block", width:"100%", textAlign:"left", background: tab===t ? BRAND.green : "none", border:"none", cursor:"pointer", color: tab===t ? "#fff" : "rgba(255,255,255,0.45)", padding:"10px 14px", borderRadius:6, fontSize:12, textTransform:"capitalize", letterSpacing:"0.04em", fontWeight: tab===t ? 700 : 400, marginBottom:3, transition:"all 0.2s" }}>{t}</button>
+          ))}
+        </div>
+        <div style={{ padding:"0 12px" }}>
+          <button onClick={onClose} style={{ display:"block", width:"100%", textAlign:"left", background:"none", border:"1px solid rgba(255,255,255,0.08)", cursor:"pointer", color:"rgba(255,255,255,0.3)", padding:"10px 14px", borderRadius:6, fontSize:12, transition:"all 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor="rgba(255,255,255,0.2)"}
+            onMouseLeave={e => e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"}
+          >← Exit Admin</button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex:1, overflowY:"auto", padding:"40px clamp(1.5rem,4vw,52px)" }}>
+        {tab === "overview" && (
+          <div>
+            <h1 style={{ fontSize:26, fontWeight:800, marginBottom:6 }}>Welcome Back.</h1>
+            <p style={{ color:"rgba(255,255,255,0.4)", marginBottom:40, fontFamily:"Georgia, serif", fontStyle:"italic", fontSize:14 }}>Your KAIYTEC Creative control center.</p>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(180px, 1fr))", gap:18, marginBottom:40 }}>
+              {[["Concept Works","5","Published"],["Blog Posts","4","Published"],["Services","10","Active"],["Newsletter","—","Connected"]].map(([l,v,s]) => (
+                <div key={l} style={{ background:"#1a1a1a", border:"1px solid rgba(255,255,255,0.06)", borderRadius:8, padding:"22px 18px" }}>
+                  <div style={{ color:"rgba(255,255,255,0.35)", fontSize:10, letterSpacing:"0.18em", textTransform:"uppercase", marginBottom:8 }}>{l}</div>
+                  <div style={{ fontSize:30, fontWeight:800, color: BRAND.green, marginBottom:3 }}>{v}</div>
+                  <div style={{ fontSize:10, color:"rgba(255,255,255,0.25)", letterSpacing:"0.1em" }}>{s}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background:"#1a1a1a", border:"1px solid rgba(10,90,47,0.2)", borderRadius:8, padding:"28px 24px" }}>
+              <h3 style={{ fontSize:13, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color: BRAND.green, marginBottom:14 }}>🔌 CMS Integration Guide</h3>
+              <p style={{ fontFamily:"Georgia, serif", color:"rgba(255,255,255,0.55)", lineHeight:1.85, fontSize:13.5, fontStyle:"italic", marginBottom:16 }}>To connect a full no-code CMS, integrate Supabase using the provided schema below. This panel is pre-structured and ready for production backend integration.</p>
+              <pre style={{ background:"rgba(0,0,0,0.3)", borderRadius:6, padding:"16px", fontSize:12, color:"rgba(255,255,255,0.5)", lineHeight:1.7, overflow:"auto" }}>{`// .env.local
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+// Supabase Tables:
+// - concepts (id, slug, title, category, body, published)
+// - blog_posts (id, slug, title, tag, body, published)  
+// - newsletter_subscribers (id, email, created_at)
+// - contact_submissions (id, name, email, service, message)
+// - services (id, slug, title, description, active)`}</pre>
+            </div>
+          </div>
+        )}
+
+        {tab === "concepts" && (
+          <div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:28 }}>
+              <h1 style={{ fontSize:22, fontWeight:800 }}>Concept Works</h1>
+              <button style={{ background: BRAND.green, color:"#fff", border:"none", cursor:"pointer", padding:"9px 18px", borderRadius:4, fontWeight:700, fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase" }}>+ Add Concept</button>
+            </div>
+            {CONCEPTS.map(c => (
+              <div key={c.slug} style={{ background:"#1a1a1a", border:"1px solid rgba(255,255,255,0.06)", borderRadius:8, padding:"18px 22px", marginBottom:10, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:14, marginBottom:3 }}>{c.title}</div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", letterSpacing:"0.1em", textTransform:"uppercase" }}>{c.category} · {c.year}</div>
+                </div>
+                <div style={{ display:"flex", gap:8 }}>
+                  {["Edit","Preview","Unpublish"].map(a => (
+                    <button key={a} style={{ background:"rgba(255,255,255,0.06)", color:"rgba(255,255,255,0.65)", border:"none", cursor:"pointer", padding:"6px 13px", borderRadius:4, fontSize:11, fontWeight:600 }}>{a}</button>
+                  ))}
+                  <button style={{ background:"rgba(255,60,60,0.12)", color:"#ff6b6b", border:"none", cursor:"pointer", padding:"6px 13px", borderRadius:4, fontSize:11, fontWeight:600 }}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "blog" && (
+          <div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:28 }}>
+              <h1 style={{ fontSize:22, fontWeight:800 }}>Blog Posts</h1>
+              <button style={{ background: BRAND.green, color:"#fff", border:"none", cursor:"pointer", padding:"9px 18px", borderRadius:4, fontWeight:700, fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase" }}>+ New Post</button>
+            </div>
+            {BLOG_POSTS.map(p => (
+              <div key={p.slug} style={{ background:"#1a1a1a", border:"1px solid rgba(255,255,255,0.06)", borderRadius:8, padding:"18px 22px", marginBottom:10, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:14, marginBottom:3 }}>{p.title}</div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)" }}>{p.tag} · {p.date} · {p.readTime}</div>
+                </div>
+                <div style={{ display:"flex", gap:8 }}>
+                  {["Edit","Unpublish"].map(a => (
+                    <button key={a} style={{ background:"rgba(255,255,255,0.06)", color:"rgba(255,255,255,0.65)", border:"none", cursor:"pointer", padding:"6px 13px", borderRadius:4, fontSize:11, fontWeight:600 }}>{a}</button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "newsletter" && (
+          <div>
+            <h1 style={{ fontSize:22, fontWeight:800, marginBottom:8 }}>Newsletter Subscribers</h1>
+            <p style={{ fontFamily:"Georgia, serif", color:"rgba(255,255,255,0.4)", fontStyle:"italic", fontSize:13, marginBottom:32 }}>Connect Supabase to manage and export subscribers.</p>
+            <div style={{ background:"#1a1a1a", border:"1px solid rgba(10,90,47,0.15)", borderRadius:8, padding:"24px", textAlign:"center" }}>
+              <div style={{ fontSize:36, marginBottom:12 }}>📧</div>
+              <p style={{ fontFamily:"Georgia, serif", color:"rgba(255,255,255,0.4)", fontStyle:"italic", fontSize:14 }}>Subscriber data will appear here once Supabase is connected.</p>
+            </div>
+          </div>
+        )}
+
+        {(tab === "services" || tab === "settings") && (
+          <div style={{ textAlign:"center", paddingTop:80 }}>
+            <div style={{ fontSize:44, marginBottom:18 }}>◎</div>
+            <h2 style={{ fontSize:20, fontWeight:700, marginBottom:12 }}>{tab.charAt(0).toUpperCase()+tab.slice(1)} Manager</h2>
+            <p style={{ fontFamily:"Georgia, serif", color:"rgba(255,255,255,0.35)", fontStyle:"italic", maxWidth:400, margin:"0 auto", lineHeight:1.8, fontSize:14 }}>Connect Supabase to enable full {tab} editing without code. This panel is pre-structured and ready for backend integration.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// FOOTER
+// ─────────────────────────────────────────────────────────────
+function Footer({ setPage }) {
+  return (
+    <footer style={{ background: BRAND.ink, padding:"72px clamp(1.5rem,5vw,4rem) 32px" }}>
+      <div style={{ maxWidth:1200, margin:"0 auto" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:48, marginBottom:60 }}>
+          <div style={{ maxWidth:300 }}>
+            <Logo height={32} forceWhite />
+            <p style={{ fontFamily:"Georgia, serif", fontSize:13.5, color:"rgba(255,255,255,0.45)", lineHeight:1.85, marginTop:20, fontStyle:"italic" }}>A premium creative agency dedicated to building brands and digital experiences that move people and move businesses forward.</p>
+            <div style={{ display:"flex", gap:10, marginTop:24 }}>
+              {(["instagram","facebook","linkedin","tiktok"]).map(p => (
+                SOCIAL_ICONS[p] ? <SocialIcon key={p} platform={p} href={SOCIAL[p]} size={36} light /> : null
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display:"flex", gap:60, flexWrap:"wrap" }}>
+            {[
+              { title:"Agency", links:[["home","Home"],["work","Work"],["services","Services"],["blog","Blog"],["about","About"]] },
+              { title:"Contact", links:[["contact","Start a Project"],["contact","Book a Consultation"],["contact","Request a Quote"]] },
+            ].map(col => (
+              <div key={col.title}>
+                <div style={{ fontFamily:"'Exo 2', sans-serif", fontSize:10, fontWeight:700, letterSpacing:"0.22em", textTransform:"uppercase", color:"rgba(255,255,255,0.3)", marginBottom:18 }}>{col.title}</div>
+                {col.links.map(([id, label]) => (
+                  <button key={label} onClick={() => setPage(id)} style={{ display:"block", background:"none", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", fontSize:14, color:"rgba(255,255,255,0.55)", fontStyle:"italic", marginBottom:12, textAlign:"left", transition:"color 0.2s", padding:0 }}
+                    onMouseEnter={e => e.currentTarget.style.color="#fff"}
+                    onMouseLeave={e => e.currentTarget.style.color="rgba(255,255,255,0.55)"}
+                  >{label}</button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ borderTop:"1px solid rgba(255,255,255,0.07)", paddingTop:24, display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:12, alignItems:"center" }}>
+          <span style={{ fontFamily:"'Exo 2', sans-serif", fontSize:11, color:"rgba(255,255,255,0.25)", letterSpacing:"0.06em" }}>© 2025 KAIYTEC Creative. All rights reserved.</span>
+          <span style={{ fontFamily:"Georgia, serif", fontSize:12, color:"rgba(255,255,255,0.2)", fontStyle:"italic" }}>Making Possibility Real.</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// APP ROOT — ROUTER
+// ─────────────────────────────────────────────────────────────
+export default function App() {
+  const [page, setPage] = useState("home");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+
+  // Derive current section for sidebar active state
+  const section = page.includes("/") ? page.split("/")[0] : page;
+
+  const navigate = useCallback((p) => {
+    setPage(p);
+    setMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  // Route resolver
+  const renderPage = () => {
+    if (page === "home")     return <HomePage setPage={navigate} />;
+    if (page === "work")     return <WorkPage setPage={navigate} />;
+    if (page === "services") return <ServicesPage setPage={navigate} />;
+    if (page === "blog")     return <BlogPage setPage={navigate} />;
+    if (page === "about")    return <AboutPage setPage={navigate} />;
+    if (page === "contact")  return <ContactPage />;
+    if (page.startsWith("work/"))    return <ConceptDetailPage slug={page.replace("work/","")} setPage={navigate} />;
+    if (page.startsWith("blog/"))    return <BlogArticlePage slug={page.replace("blog/","")} setPage={navigate} />;
+    if (page.startsWith("service/")) return <ServiceDetailPage slug={page.replace("service/","")} setPage={navigate} />;
+    return <HomePage setPage={navigate} />;
+  };
+
+  return (
+    <div style={{ fontFamily:"'Exo 2', sans-serif", background: BRAND.mist, overflowX:"hidden" }}>
+      {/* Google Fonts */}
+      <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+      {/* SIDEBAR NAV */}
+      <Sidebar page={section} setPage={navigate} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+
+      {/* MAIN CONTENT — offset for sidebar on desktop */}
+      <main style={{ marginLeft:0 }} className="main-content">
+        {renderPage()}
+      </main>
+
+      {/* FOOTER */}
+      <div className="main-content">
+        <Footer setPage={navigate} />
+      </div>
+
+      {/* FLOATING WHATSAPP */}
+      <FloatingWhatsApp />
+
+      {/* ADMIN TRIGGER — subtle lock icon bottom left */}
+      <button onClick={() => setAdminOpen(true)} title="Admin" style={{
+        position:"fixed", bottom:28, left: 228, zIndex:800,
+        background:"rgba(10,90,47,0.07)", border:`1px solid ${BRAND.border}`,
+        borderRadius:"50%", width:34, height:34, cursor:"pointer",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        transition:"all 0.2s",
+      }}
+        onMouseEnter={e => { e.currentTarget.style.background = BRAND.greenLight; e.currentTarget.style.transform="scale(1.1)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "rgba(10,90,47,0.07)"; e.currentTarget.style.transform="scale(1)"; }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BRAND.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </button>
+
+      {/* ADMIN PANEL */}
+      {adminOpen && <AdminPage onClose={() => setAdminOpen(false)} />}
+
+      {/* GLOBAL STYLES */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800;900&display=swap');
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior:smooth; }
+        body { background:${BRAND.mist}; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width:5px; }
+        ::-webkit-scrollbar-track { background:${BRAND.mist}; }
+        ::-webkit-scrollbar-thumb { background:rgba(10,90,47,0.28); border-radius:3px; }
+        
+        /* Input placeholder */
+        input::placeholder, textarea::placeholder { color:#bbb; font-style:italic; }
+        
+        /* Hero word animation */
+        @keyframes wordFade {
+          from { opacity:0; transform:translateY(12px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes slideUp { from { transform:translateY(24px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+
+        /* Desktop sidebar offset */
+        @media (min-width:901px) {
+          .main-content { margin-left:220px; }
+          .sidebar-desktop { display:flex !important; }
+          .hamburger-btn { display:none !important; }
+          .mobile-menu { display:none !important; }
+        }
+        
+        /* Mobile */
+        @media (max-width:900px) {
+          .sidebar-desktop { display:none !important; }
+          .hamburger-btn { display:flex !important; }
+          
+          /* Stack 2-col grids on mobile */
+          .two-col-grid { grid-template-columns:1fr !important; gap:36px !important; }
+        }
+
+        /* Smooth page transitions */
+        .main-content { animation: fadeIn 0.4s ease; }
+        
+        /* Link reset */
+        a { color:inherit; }
+      `}</style>
+    </div>
+  );
+}
