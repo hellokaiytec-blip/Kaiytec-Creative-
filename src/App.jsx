@@ -1695,7 +1695,7 @@ export default function App() {
         background:"rgba(10,90,47,0.07)", border:`1px solid ${BRAND.border}`,
         borderRadius:"50%", width:34, height:34, cursor:"pointer",
         display:"flex", alignItems:"center", justifyContent:"center",
-        transition:"all 0.2s",
+        transition:"all 0.2s",display:"none",
       }}
         onMouseEnter={e => { e.currentTarget.style.background = BRAND.greenLight; e.currentTarget.style.transform="scale(1.1)"; }}
         onMouseLeave={e => { e.currentTarget.style.background = "rgba(10,90,47,0.07)"; e.currentTarget.style.transform="scale(1)"; }}
