@@ -902,10 +902,13 @@ function ProcessSection() {
 // ─────────────────────────────────────────────────────────────
  function NewsletterSection() {
   const [email, setEmail] = useState("");
-  const [state, setState] = useState("idle");const submit = async () => {
+  const [state, setState] = useState("idle");
+  const submit = async () => {
     if (!email || !email.includes("@")) return;
     setState("loading");
     try {
+      const { supabase } = await import('./supabase.js');
+      await supabase.from('newsletter_subscribers').insert([{ email }]);
       await fetch("https://formspree.io/f/xlgzqpkl", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -1342,10 +1345,18 @@ function AboutPage({ setPage }) {
 function ContactPage() {
   const [form, setForm] = useState({ name:"", email:"", service:"", message:"" });
   const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false); const send = async () => {
+  const [loading, setLoading] = useState(false);
+  const send = async () => {
     if (!form.name || !form.email || !form.message) return;
     setLoading(true);
     try {
+      const { supabase } = await import('./supabase.js');
+      await supabase.from('contact_submissions').insert([{
+        name: form.name,
+        email: form.email,
+        service: form.service,
+        message: form.message,
+      }]);
       await fetch("https://formspree.io/f/xlgzqpkl", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
