@@ -34,12 +34,11 @@ const BRAND = {
 // SOCIAL CONFIG (centralized — update once)
 // ─────────────────────────────────────────────────────────────
 const SOCIAL = {
+ 
   instagram: "https://instagram.com/kaiytec.creative",
   facebook:  "https://facebook.com/kaiyteccreative",
   tiktok:    "https://tiktok.com/@kaiytec",
-  linkedin:  "https://linkedin.com/company/kaiytec",
-  behance:   "https://behance.net/kaiytec",
-  twitter:   "https://twitter.com/kaiytec",
+  linkedin:  "https://linkedin.com/company/kaiytec-creative",
 };
 
 // WhatsApp config
@@ -607,9 +606,9 @@ function SocialIcon({ platform, href, size = 36, light = false }) {
 function HomePage({ setPage }) {
   const [tick, setTick] = useState(0);
   const phrases = [
-    "Making Possibility Real.",
-    "Where Vision Becomes Identity.",
-    "Crafted to Leave an Impression.",
+    "Making Possibility Real",
+    "Where Vision Becomes Identity",
+    "Crafted to Leave an Impression",
     "Designing Experiences People Remember.",
   ];
   useEffect(() => {
