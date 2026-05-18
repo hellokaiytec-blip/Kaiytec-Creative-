@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-
+import { useNavigate, useLocation, Routes, Route, useParams } from "react-router-dom";
 // ─────────────────────────────────────────────────────────────
 // BRAND TOKENS
 // ─────────────────────────────────────────────────────────────
@@ -1651,120 +1651,109 @@ function Footer({ setPage }) {
 // APP ROOT — ROUTER
 // ─────────────────────────────────────────────────────────────
 export default function App() {
-  const [page, setPage] = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const navigateTo = useNavigate();
+  const location = useLocation();
 
-  // Derive current section for sidebar active state
-  const section = page.includes("/") ? page.split("/")[0] : page;
+  const section = location.pathname.split("/")[1] || "home";
 
   const navigate = useCallback((p) => {
-    setPage(p);
     setMenuOpen(false);
+    if (p === "home") {
+      navigateTo("/");
+    } else {
+      navigateTo(`/${p}`);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
-
-  // Route resolver
-  const renderPage = () => {
-    if (page === "home")     return <HomePage setPage={navigate} />;
-    if (page === "work")     return <WorkPage setPage={navigate} />;
-    if (page === "services") return <ServicesPage setPage={navigate} />;
-    if (page === "blog")     return <BlogPage setPage={navigate} />;
-    if (page === "about")    return <AboutPage setPage={navigate} />;
-    if (page === "contact")  return <ContactPage />;
-    if (page.startsWith("work/"))    return <ConceptDetailPage slug={page.replace("work/","")} setPage={navigate} />;
-    if (page.startsWith("blog/"))    return <BlogArticlePage slug={page.replace("blog/","")} setPage={navigate} />;
-    if (page.startsWith("service/")) return <ServiceDetailPage slug={page.replace("service/","")} setPage={navigate} />;
-    return <HomePage setPage={navigate} />;
-  };
+  }, [navigateTo]);
 
   return (
     <div style={{ fontFamily:"'Exo 2', sans-serif", background: BRAND.mist, overflowX:"hidden" }}>
-      {/* Google Fonts */}
       <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {/* SIDEBAR NAV */}
       <Sidebar page={section} setPage={navigate} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
-      {/* MAIN CONTENT — offset for sidebar on desktop */}
-      <main style={{ }} className="main-content">
-        {renderPage()}
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<HomePage setPage={navigate} />} />
+          <Route path="/home" element={<HomePage setPage={navigate} />} />
+          <Route path="/work" element={<WorkPage setPage={navigate} />} />
+          <Route path="/work/:slug" element={<ConceptDetailPageWrapper setPage={navigate} />} />
+          <Route path="/services" element={<ServicesPage setPage={navigate} />} />
+          <Route path="/service/:slug" element={<ServiceDetailPageWrapper setPage={navigate} />} />
+          <Route path="/blog" element={<BlogPage setPage={navigate} />} />
+          <Route path="/blog/:slug" element={<BlogArticlePageWrapper setPage={navigate} />} />
+          <Route path="/about" element={<AboutPage setPage={navigate} />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="*" element={<HomePage setPage={navigate} />} />
+        </Routes>
       </main>
 
-      {/* FOOTER */}
       <div className="main-content">
         <Footer setPage={navigate} />
       </div>
 
-      {/* FLOATING WHATSAPP */}
       <FloatingWhatsApp />
 
-      {/* ADMIN TRIGGER — subtle lock icon bottom left */}
       <button onClick={() => setAdminOpen(true)} title="Admin" style={{
-        position:"fixed", bottom:28, left: 260, zIndex:800,
-        background:"rgba(10,90,47,0.07)", border:`1px solid ${BRAND.border}`,
-        borderRadius:"50%", width:34, height:34, cursor:"pointer",
-        display:"flex", alignItems:"center", justifyContent:"center",
-        transition:"all 0.2s",display:"none",
-      }}
-        onMouseEnter={e => { e.currentTarget.style.background = BRAND.greenLight; e.currentTarget.style.transform="scale(1.1)"; }}
-        onMouseLeave={e => { e.currentTarget.style.background = "rgba(10,90,47,0.07)"; e.currentTarget.style.transform="scale(1)"; }}
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BRAND.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-      </button>
+        position:"fixed", bottom:28, left:260, zIndex:800,
+        background:"transparent", border:"none",
+        width:20, height:20, cursor:"pointer", opacity:0,
+      }} />
 
-      {/* ADMIN PANEL */}
       {adminOpen && <AdminPage onClose={() => setAdminOpen(false)} />}
 
-      {/* GLOBAL STYLES */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800;900&display=swap');
         * { margin:0; padding:0; box-sizing:border-box; }
         html { scroll-behavior:smooth; }
         body { background:${BRAND.mist}; }
-
-        /* Scrollbar */
         ::-webkit-scrollbar { width:5px; }
         ::-webkit-scrollbar-track { background:${BRAND.mist}; }
         ::-webkit-scrollbar-thumb { background:rgba(10,90,47,0.28); border-radius:3px; }
-        
-        /* Input placeholder */
         input::placeholder, textarea::placeholder { color:#bbb; font-style:italic; }
-        
-        /* Hero word animation */
         @keyframes wordFade {
           from { opacity:0; transform:translateY(12px); }
           to   { opacity:1; transform:translateY(0); }
         }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        @keyframes slideUp { from { transform:translateY(24px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-
-        /* Desktop sidebar offset */
         @media (min-width:901px) {
           .main-content { margin-left:260px; }
           .sidebar-desktop { display:flex !important; }
           .hamburger-btn { display:none !important; }
           .mobile-menu { display:none !important; }
         }
-        
-        /* Mobile */
         @media (max-width:900px) {
           .sidebar-desktop { display:none !important; }
           .hamburger-btn { display:flex !important; }
-          
-          /* Stack 2-col grids on mobile */
           .two-col-grid { grid-template-columns:1fr !important; gap:36px !important; }
+          .contact-grid > *:first-child { order: 1; }
+          .contact-grid > *:last-child  { order: 2; }
         }
-
-        /* Smooth page transitions */
         .main-content { animation: fadeIn 0.4s ease; }
-        
-        /* Link reset */
         a { color:inherit; }
       `}</style>
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────
+// ROUTE WRAPPERS — needed for React Router slug params
+// ─────────────────────────────────────────────────────────────
+import { useParams } from "react-router-dom";
+
+function ConceptDetailPageWrapper({ setPage }) {
+  const { slug } = useParams();
+  return <ConceptDetailPage slug={slug} setPage={setPage} />;
+}
+
+function ServiceDetailPageWrapper({ setPage }) {
+  const { slug } = useParams();
+  return <ServiceDetailPage slug={slug} setPage={setPage} />;
+}
+
+function BlogArticlePageWrapper({ setPage }) {
+  const { slug } = useParams();
+  return <BlogArticlePage slug={slug} setPage={setPage} />;
+      }
