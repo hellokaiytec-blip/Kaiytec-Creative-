@@ -1379,8 +1379,7 @@ function ContactPage() {
   return (
     <div style={{ paddingTop:80 }}>
       <section style={{ background: BRAND.mist, padding:"80px clamp(1.5rem,5vw,4rem) 100px" }}>
-        <div style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1.1fr", gap:72, alignItems:"start" }}>
-          <Reveal>
+        <div className="two-col-grid contact-grid" style={{ maxWidth:1100, margin:"0 auto", display:"grid", gridTemplateColumns:"1fr 1.1fr", gap:72, alignItems:"start" }}>
             <SectionLabel text="Start a Conversation" />
             <h1 style={{ ...T.h1, fontSize:"clamp(2rem,4vw,3.2rem)", marginBottom:24 }}>Let's build something<br/>worth remembering.</h1>
             <p style={{ ...T.body, marginBottom:52 }}>Whether you're launching a new brand, rethinking an existing one, or looking for a creative partner for the long term — we'd love to hear about your vision.</p>
