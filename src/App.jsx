@@ -1107,7 +1107,7 @@ function ServicesPage({ setPage }) {
 function ServiceDetailPage({ slug, setPage }) {
   const s = SERVICES.find(x => x.slug === slug);
   useEffect(() => { window.scrollTo(0,0); }, [slug]);
-  if (!s) return null;
+  if (!s) return <div style={{ padding:120, textAlign:"center", fontFamily:"'Exo 2', sans-serif" }}>Service not found. <button onClick={() => setPage("services")} style={{ color: BRAND.green, background:"none", border:"none", cursor:"pointer" }}>← Back to Services</button></div>;
 
   const details = {
     "brand-identity": {
@@ -1221,7 +1221,7 @@ function BlogArticlePage({ slug, setPage }) {
   const post = BLOG_POSTS.find(x => x.slug === slug);
   const related = BLOG_POSTS.filter(x => x.slug !== slug).slice(0,2);
   useEffect(() => { window.scrollTo(0,0); }, [slug]);
-  if (!post) return null;
+  if (!post) return <div style={{ padding:120, textAlign:"center", fontFamily:"'Exo 2', sans-serif" }}>Article not found. <button onClick={() => setPage("blog")} style={{ color: BRAND.green, background:"none", border:"none", cursor:"pointer" }}>← Back to Blog</button></div>;
 
   return (
     <div style={{ paddingTop:72 }}>
