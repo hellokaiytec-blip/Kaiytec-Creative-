@@ -1741,7 +1741,6 @@ export default function App() {
 // ─────────────────────────────────────────────────────────────
 // ROUTE WRAPPERS — needed for React Router slug params
 // ─────────────────────────────────────────────────────────────
-import { useParams } from "react-router-dom";
 
 function ConceptDetailPageWrapper({ setPage }) {
   const { slug } = useParams();
